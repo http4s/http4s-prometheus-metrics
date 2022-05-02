@@ -18,7 +18,7 @@ package org.http4s.metrics.prometheus
 
 import cats.effect._
 import io.prometheus.client.CollectorRegistry
-import org.http4s.Http4sSuite
+import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.Request
 import org.http4s.Status
@@ -32,7 +32,7 @@ import org.http4s.syntax.literals._
 import java.io.IOException
 import java.util.concurrent.TimeoutException
 
-class PrometheusClientMetricsSuite extends Http4sSuite {
+class PrometheusClientMetricsSuite extends CatsEffectSuite {
   val client: Client[IO] = Client.fromHttpApp[IO](HttpApp[IO](stub))
 
   meteredClient().test(
