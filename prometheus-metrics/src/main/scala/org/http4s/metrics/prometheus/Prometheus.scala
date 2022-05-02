@@ -32,7 +32,7 @@ import org.http4s.metrics.TerminationType.Timeout
 
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
   *
-  * For example, the following code would wrap a [[org.http4s.HttpRoutes]] with a [[org.http4s.server.middleware.Metrics]]
+  * For example, the following code would wrap a [[org.http4s.HttpRoutes]] with a `org.http4s.server.middleware.Metrics`
   * that records metrics to a given metric registry.
   * {{{
   * import cats.effect.{Resource, IO}
@@ -43,7 +43,7 @@ import org.http4s.metrics.TerminationType.Timeout
   *   Prometheus.metricsOps[IO](registry, "server").map(ops => Metrics[IO](ops)(testRoutes))
   * }}}
   *
-  * Analogously, the following code would wrap a [[org.http4s.client.Client]] with a [[org.http4s.client.middleware.Metrics]]
+  * Analogously, the following code would wrap a `org.http4s.client.Client` with a `org.http4s.client.middleware.Metrics`
   * that records metrics to a given metric registry, classifying the metrics by HTTP method.
   * {{{
   * import cats.effect.{Resource, IO}
