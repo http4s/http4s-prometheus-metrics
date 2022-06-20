@@ -1,4 +1,4 @@
-ThisBuild / tlBaseVersion := "0.23"
+ThisBuild / tlBaseVersion := "1.0"
 ThisBuild / tlMimaPreviousVersions ++= (0 to 11).map(y => s"0.23.$y").toSet
 ThisBuild / developers := List(
   tlGitHubDev("rossabaker", "Ross A. Baker")
@@ -10,7 +10,7 @@ ThisBuild / scalaVersion := Scala213
 
 lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins(NoPublishPlugin)
 
-val http4sVersion = "0.23.12"
+val http4sVersion = "1.0.0-M33"
 val prometheusVersion = "0.16.0"
 val munitVersion = "0.7.29"
 val munitCatsEffectVersion = "1.0.7"
