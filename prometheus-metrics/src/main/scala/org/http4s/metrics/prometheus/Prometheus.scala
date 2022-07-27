@@ -221,6 +221,7 @@ object Prometheus {
           case Method.GET => "get"
           case Method.PUT => "put"
           case Method.POST => "post"
+          case Method.PATCH => "patch"
           case Method.HEAD => "head"
           case Method.MOVE => "move"
           case Method.OPTIONS => "options"

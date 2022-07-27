@@ -1,5 +1,4 @@
 ThisBuild / tlBaseVersion := "1.0"
-ThisBuild / tlMimaPreviousVersions ++= (0 to 11).map(y => s"0.23.$y").toSet
 ThisBuild / developers := List(
   tlGitHubDev("rossabaker", "Ross A. Baker")
 )
