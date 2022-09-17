@@ -4,7 +4,7 @@ ThisBuild / developers := List(
 )
 
 val Scala213 = "2.13.8"
-ThisBuild / crossScalaVersions := Seq("2.12.16", Scala213, "3.1.3")
+ThisBuild / crossScalaVersions := Seq("2.12.17", Scala213, "3.1.3")
 ThisBuild / scalaVersion := Scala213
 
 lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins(NoPublishPlugin)
