@@ -25,8 +25,6 @@ import org.http4s.Uri.Path
 import org.http4s._
 import org.http4s.syntax.all._
 
-import java.io.StringWriter
-
 /*
  * PrometheusExportService Contains an HttpService
  * ready to be scraped by Prometheus, paired
@@ -54,7 +52,7 @@ object PrometheusExportService {
   def generateResponse[F[_]: Sync](collectorRegistry: CollectorRegistry): F[Response[F]] =
     Sync[F]
       .delay {
-        val writer = new StringWriter
+        val writer = new NonSafepointingStringWriter()
         TextFormat.write004(writer, collectorRegistry.metricFamilySamples)
         writer.toString
       }
