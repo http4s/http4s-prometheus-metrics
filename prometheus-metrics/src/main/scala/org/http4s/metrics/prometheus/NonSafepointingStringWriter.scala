@@ -21,7 +21,7 @@ private[prometheus] class NonSafepointingStringWriter extends Writer {
   }
 
   override def write(i: Int): Unit = {
-    buf.append(i)
+    buf.append(i.toChar)
     ()
   }
 
