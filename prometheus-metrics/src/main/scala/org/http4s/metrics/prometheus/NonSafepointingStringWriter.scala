@@ -3,7 +3,8 @@ package org.http4s.metrics.prometheus
 import java.io.Writer
 
 /** This should be equivalent to [[java.io.StringWriter]] but uses
-  * a
+  * a [[java.lang.StringBuilder]] rather than a [[java.lang.StringBuffer]]
+  * and consequently is not synchronized
   */
 private[prometheus] class NonSafepointingStringWriter extends Writer {
 
