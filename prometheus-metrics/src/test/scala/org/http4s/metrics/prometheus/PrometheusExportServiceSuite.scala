@@ -1,5 +1,3 @@
-package org.http4s.metrics.prometheus
-
 /*
  * Copyright 2018 http4s.org
  *
@@ -20,24 +18,25 @@ package org.http4s.metrics.prometheus
 
 import cats.effect._
 import munit.CatsEffectSuite
-import _root_.org.http4s._
-import _root_.org.http4s.dsl.io._
-import _root_.org.http4s.implicits._
+import org.http4s.client.dsl.io._
+import org.http4s.dsl.io._
+import org.http4s.implicits._
 
-class PrometheusClientMetricsSuite extends CatsEffectSuite {
+class PrometheusExportServiceSuite extends CatsEffectSuite {
 
   test("Returns Prometheus-format") {
     PrometheusExportService.build[IO].use { svc =>
       svc.routes.orNotFound
-        .run(Request(method = GET, uri = Uri.unsafeFromString("/metrics")))
-        .flatMap(resp => resp.body.compile.to(Array).map(new String(_)))
+        .run(GET(uri"/metrics"))
+        .flatMap(resp => resp.as[String])
         .flatMap { resp =>
           IO {
-            println(resp)
-            val lines = resp.lines().toList
+            val lines = resp.linesIterator.toList
             // Assortment of lines that should appear in the output as a sanity check
             assert(clue(lines).contains("# TYPE jvm_memory_pool_allocated_bytes_total counter"))
             assert(clue(lines).contains("# HELP jvm_threads_daemon Daemon thread count of a JVM"))
+            assert(clue(lines).contains("# HELP process_open_fds Number of open file descriptors."))
+            assert(clue(lines).contains("# TYPE process_open_fds gauge"))
           }
         }
     }
