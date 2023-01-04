@@ -12,9 +12,10 @@ libraryDependencies ++= Seq(
 
 ## Compatibility
 
-| http4s-prometheus-metrics | http4s-core | prometheus-metrics | Scala 2.12 | Scala 2.13 | Scala 3 | Status |
-|:--------------------------|:------------|:-------------------|------------|------------|---------|:-------|
-| 0.23.x                    | 0.23.x      | 0.11.x             | ✅         | ✅         | ❌      | EOL    |
-| 0.24.x                    | 0.23.x      | 0.16.x             | ✅         | ✅         | ✅      | Stable |
+| http4s-prometheus-metrics | http4s-core | prometheus-metrics | Scala 2.12 | Scala 2.13 | Scala 3 | Status      |
+|:--------------------------|:------------|:-------------------|------------|------------|---------|:------------|
+| 0.23.x                    | 0.23.x      | 0.11.x             | ✅         | ✅         | ❌      | EOL         |
+| 0.24.x                    | 0.23.x      | 0.16.x             | ✅         | ✅         | ✅      | Stable      |
+| 1.0.0-M38                 | 1.0.0-M38   | 0.16.x             | ✅         | ✅         | ✅      | Development |
 
 [prometheus-metrics]: https://com-lihaoyi.github.io/prometheus-metrics/
