@@ -23,7 +23,6 @@ import io.prometheus.client.exporter.common.TextFormat
 import io.prometheus.client.hotspot._
 import org.http4s.Uri.Path
 import org.http4s._
-import org.http4s.headers.Accept
 import org.http4s.syntax.all._
 import org.typelevel.ci.CIString
 
