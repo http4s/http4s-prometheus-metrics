@@ -24,7 +24,7 @@ import io.prometheus.client.hotspot._
 import org.http4s.Uri.Path
 import org.http4s._
 import org.http4s.syntax.all._
-import org.typelevel.ci.CIString
+import org.typelevel.ci._
 
 /*
  * PrometheusExportService Contains an HttpService
@@ -74,23 +74,26 @@ object PrometheusExportService {
   def generateResponse[F[_]: Sync](
       contentType: String,
       collectorRegistry: CollectorRegistry,
-  ): F[Response[F]] =
-    Sync[F]
+  ): F[Response[F]] = for {
+    parsedContentType <- Sync[F].delay(TextFormat.chooseContentType(contentType))
+    text <- Sync[F]
       .delay {
         val writer = new NonSafepointingStringWriter()
         TextFormat.writeFormat(
-          TextFormat.chooseContentType(contentType),
+          parsedContentType,
           writer,
           collectorRegistry.metricFamilySamples,
         )
         writer.toString
       }
-      .map(Response[F](Status.Ok).withEntity(_))
+  } yield Response[F](Status.Ok)
+    .withEntity(text)
+    .withHeaders(Header.Raw(ci"Content-Type", parsedContentType))
 
   def service[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
     HttpRoutes.of[F] {
       case req if req.method == Method.GET && req.pathInfo == metricsPath =>
-        generateResponse(req.headers.get(CIString("accept")).map(_.head.value), collectorRegistry)
+        generateResponse(req.headers.get(ci"accept").map(_.head.value), collectorRegistry)
     }
 
   def service004[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
