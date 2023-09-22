@@ -16,10 +16,13 @@
 
 package org.http4s.metrics.prometheus
 
+import cats.Applicative
 import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.apply._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import io.prometheus.client._
 import org.http4s.Method
 import org.http4s.Status
@@ -29,6 +32,8 @@ import org.http4s.metrics.TerminationType.Abnormal
 import org.http4s.metrics.TerminationType.Canceled
 import org.http4s.metrics.TerminationType.Error
 import org.http4s.metrics.TerminationType.Timeout
+
+import scala.jdk.CollectionConverters._
 
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
   *
@@ -95,10 +100,21 @@ object Prometheus {
   ): Resource[F, MetricsOps[F]] =
     for {
       metrics <- createMetricsCollection(registry, prefix, responseDurationSecondsHistogramBuckets)
-    } yield createMetricsOps(metrics)
+    } yield createMetricsOps(metrics, Applicative[F].pure(None))
+
+  def metricsOpsWithExemplars[F[_]: Sync](
+      registry: CollectorRegistry,
+      sampleExemplar: F[Option[Map[String, String]]],
+      prefix: String = "org_http4s_server",
+      responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
+  ): Resource[F, MetricsOps[F]] =
+    for {
+      metrics <- createMetricsCollection(registry, prefix, responseDurationSecondsHistogramBuckets)
+    } yield createMetricsOps(metrics, sampleExemplar.map(_.map(_.asJava)))
 
   private def createMetricsOps[F[_]](
-      metrics: MetricsCollection
+      metrics: MetricsCollection,
+      exemplarLabels: F[Option[java.util.Map[String, String]]],
   )(implicit F: Sync[F]): MetricsOps[F] =
     new MetricsOps[F] {
       override def increaseActiveRequests(classifier: Option[String]): F[Unit] =
@@ -120,10 +136,15 @@ object Prometheus {
           elapsed: Long,
           classifier: Option[String],
       ): F[Unit] =
-        F.delay {
-          metrics.responseDuration
-            .labels(label(classifier), reportMethod(method), Phase.report(Phase.Headers))
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.responseDuration
+              .labels(label(classifier), reportMethod(method), Phase.report(Phase.Headers))
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull,
+              )
+          }
         }
 
       override def recordTotalTime(
@@ -132,13 +153,18 @@ object Prometheus {
           elapsed: Long,
           classifier: Option[String],
       ): F[Unit] =
-        F.delay {
-          metrics.responseDuration
-            .labels(label(classifier), reportMethod(method), Phase.report(Phase.Body))
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
-          metrics.requests
-            .labels(label(classifier), reportMethod(method), reportStatus(status))
-            .inc()
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.responseDuration
+              .labels(label(classifier), reportMethod(method), Phase.report(Phase.Body))
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull,
+              )
+            metrics.requests
+              .labels(label(classifier), reportMethod(method), reportStatus(status))
+              .incWithExemplar(exemplarOpt.orNull)
+          }
         }
 
       override def recordAbnormalTermination(
@@ -154,14 +180,19 @@ object Prometheus {
         }
 
       private def recordCanceled(elapsed: Long, classifier: Option[String]): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Canceled),
-              label(Option.empty),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Canceled),
+                label(Option.empty),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull,
+              )
+          }
         }
 
       private def recordAbnormal(
@@ -169,14 +200,19 @@ object Prometheus {
           classifier: Option[String],
           cause: Throwable,
       ): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Abnormal),
-              label(Option(cause.getClass.getName)),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Abnormal),
+                label(Option(cause.getClass.getName)),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull,
+              )
+          }
         }
 
       private def recordError(
@@ -184,25 +220,35 @@ object Prometheus {
           classifier: Option[String],
           cause: Throwable,
       ): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Error),
-              label(Option(cause.getClass.getName)),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Error),
+                label(Option(cause.getClass.getName)),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull,
+              )
+          }
         }
 
       private def recordTimeout(elapsed: Long, classifier: Option[String]): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Timeout),
-              label(Option.empty),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Timeout),
+                label(Option.empty),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull,
+              )
+          }
         }
 
       private def label(value: Option[String]): String = value.getOrElse("")
