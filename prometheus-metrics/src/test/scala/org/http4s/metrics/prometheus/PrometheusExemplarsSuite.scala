@@ -31,12 +31,15 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
     "A http client with a prometheus metrics middleware should sample an exemplar"
   ) { case (registry, client) =>
     client.expect[String]("/ok").attempt.map { resp =>
+      val filter = new java.util.HashSet[String]()
+      filter.add("exemplars_request_count_total")
       val exemplar = registry
-        .filteredMetricFamilySamples(java.util.Set.of("exemplars_request_count_total"))
+        .filteredMetricFamilySamples(filter)
         .nextElement()
         .samples
         .get(0)
         .exemplar
+
       assertEquals(exemplar.getLabelName(0), "trace_id")
       assertEquals(exemplar.getLabelValue(0), "123")
       assertEquals(resp, Right("200 OK"))

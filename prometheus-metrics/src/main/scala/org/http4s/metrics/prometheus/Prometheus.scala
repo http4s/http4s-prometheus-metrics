@@ -33,8 +33,6 @@ import org.http4s.metrics.TerminationType.Canceled
 import org.http4s.metrics.TerminationType.Error
 import org.http4s.metrics.TerminationType.Timeout
 
-import scala.jdk.CollectionConverters._
-
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
   *
   * For example, the following code would wrap a [[org.http4s.HttpRoutes]] with a `org.http4s.server.middleware.Metrics`
@@ -110,11 +108,11 @@ object Prometheus {
   ): Resource[F, MetricsOps[F]] =
     for {
       metrics <- createMetricsCollection(registry, prefix, responseDurationSecondsHistogramBuckets)
-    } yield createMetricsOps(metrics, sampleExemplar.map(_.map(_.asJava)))
+    } yield createMetricsOps(metrics, sampleExemplar.map(_.map(toFlatArray)))
 
   private def createMetricsOps[F[_]](
       metrics: MetricsCollection,
-      exemplarLabels: F[Option[java.util.Map[String, String]]],
+      exemplarLabels: F[Option[Array[String]]],
   )(implicit F: Sync[F]): MetricsOps[F] =
     new MetricsOps[F] {
       override def increaseActiveRequests(classifier: Option[String]): F[Unit] =
@@ -142,7 +140,7 @@ object Prometheus {
               .labels(label(classifier), reportMethod(method), Phase.report(Phase.Headers))
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull,
+                exemplarOpt.orNull: _*
               )
           }
         }
@@ -159,11 +157,11 @@ object Prometheus {
               .labels(label(classifier), reportMethod(method), Phase.report(Phase.Body))
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull,
+                exemplarOpt.orNull: _*
               )
             metrics.requests
               .labels(label(classifier), reportMethod(method), reportStatus(status))
-              .incWithExemplar(exemplarOpt.orNull)
+              .incWithExemplar(exemplarOpt.orNull: _*)
           }
         }
 
@@ -190,7 +188,7 @@ object Prometheus {
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull,
+                exemplarOpt.orNull: _*
               )
           }
         }
@@ -210,7 +208,7 @@ object Prometheus {
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull,
+                exemplarOpt.orNull: _*
               )
           }
         }
@@ -230,7 +228,7 @@ object Prometheus {
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull,
+                exemplarOpt.orNull: _*
               )
           }
         }
@@ -246,7 +244,7 @@ object Prometheus {
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull,
+                exemplarOpt.orNull: _*
               )
           }
         }
@@ -338,6 +336,18 @@ object Prometheus {
   // https://github.com/prometheus/client_java/blob/parent-0.6.0/simpleclient/src/main/java/io/prometheus/client/Histogram.java#L73
   private val DefaultHistogramBuckets: NonEmptyList[Double] =
     NonEmptyList(.005, List(.01, .025, .05, .075, .1, .25, .5, .75, 1, 2.5, 5, 7.5, 10))
+
+  // Prometheus expects exemplars as alternating key-value strings: k1, v1, k2, v2, ...
+  private def toFlatArray(m: Map[String, String]): Array[String] = {
+    val arr = new Array[String](m.size * 2)
+    var i = 0
+    m.foreach { case (key, value) =>
+      arr(i) = key
+      arr(i + 1) = value
+      i += 2
+    }
+    arr
+  }
 }
 
 final case class MetricsCollection(
