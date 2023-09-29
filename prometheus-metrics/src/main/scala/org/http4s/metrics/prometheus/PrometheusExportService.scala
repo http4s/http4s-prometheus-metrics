@@ -24,6 +24,7 @@ import io.prometheus.client.hotspot._
 import org.http4s.Uri.Path
 import org.http4s._
 import org.http4s.syntax.all._
+import org.typelevel.ci._
 
 /*
  * PrometheusExportService Contains an HttpService
@@ -43,25 +44,68 @@ object PrometheusExportService {
   def apply[F[_]: Sync](collectorRegistry: CollectorRegistry): PrometheusExportService[F] =
     new PrometheusExportService(service(collectorRegistry), collectorRegistry)
 
+  def format004[F[_]: Sync](collectorRegistry: CollectorRegistry): PrometheusExportService[F] =
+    new PrometheusExportService(service004(collectorRegistry), collectorRegistry)
+
+  def formatOpenmetrics100[F[_]: Sync](
+      collectorRegistry: CollectorRegistry
+  ): PrometheusExportService[F] =
+    new PrometheusExportService(serviceOpenmetrics100(collectorRegistry), collectorRegistry)
+
   def build[F[_]: Sync]: Resource[F, PrometheusExportService[F]] =
     for {
       cr <- Prometheus.collectorRegistry[F]
       _ <- addDefaults(cr)
     } yield new PrometheusExportService[F](service(cr), cr)
 
-  def generateResponse[F[_]: Sync](collectorRegistry: CollectorRegistry): F[Response[F]] =
-    Sync[F]
+  def generateResponse[F[_]: Sync](
+      collectorRegistry: CollectorRegistry
+  ): F[Response[F]] = generateResponse(None, collectorRegistry)
+
+  def generateResponse[F[_]: Sync](
+      acceptHeader: Option[String],
+      collectorRegistry: CollectorRegistry,
+  ): F[Response[F]] =
+    generateResponse(
+      acceptHeader.fold(TextFormat.CONTENT_TYPE_004)(TextFormat.chooseContentType),
+      collectorRegistry,
+    )
+
+  def generateResponse[F[_]: Sync](
+      contentType: String,
+      collectorRegistry: CollectorRegistry,
+  ): F[Response[F]] = for {
+    parsedContentType <- Sync[F].delay(TextFormat.chooseContentType(contentType))
+    text <- Sync[F]
       .delay {
         val writer = new NonSafepointingStringWriter()
-        TextFormat.write004(writer, collectorRegistry.metricFamilySamples)
+        TextFormat.writeFormat(
+          parsedContentType,
+          writer,
+          collectorRegistry.metricFamilySamples,
+        )
         writer.toString
       }
-      .map(Response[F](Status.Ok).withEntity(_))
+  } yield Response[F](Status.Ok)
+    .withEntity(text)
+    .withHeaders(Header.Raw(ci"Content-Type", parsedContentType))
 
   def service[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
     HttpRoutes.of[F] {
       case req if req.method == Method.GET && req.pathInfo == metricsPath =>
-        generateResponse(collectorRegistry)
+        generateResponse(req.headers.get(ci"accept").map(_.head.value), collectorRegistry)
+    }
+
+  def service004[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
+    HttpRoutes.of[F] {
+      case req if req.method == Method.GET && req.pathInfo == metricsPath =>
+        generateResponse(TextFormat.CONTENT_TYPE_004, collectorRegistry)
+    }
+
+  def serviceOpenmetrics100[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
+    HttpRoutes.of[F] {
+      case req if req.method == Method.GET && req.pathInfo == metricsPath =>
+        generateResponse(TextFormat.CONTENT_TYPE_OPENMETRICS_100, collectorRegistry)
     }
 
   def addDefaults[F[_]: Sync](cr: CollectorRegistry): Resource[F, Unit] =
