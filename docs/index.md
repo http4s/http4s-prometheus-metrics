@@ -49,3 +49,8 @@ val prefixedClient: Resource[IO, Client[IO]] =
     metrics <- Prometheus.metricsOps[IO](registry, "prefix")
   } yield Metrics[IO](metrics, classifier)(httpClient)
 ```
+
+## Exemplars
+
+You can add Prometheus exemplars to most of the metrics (except gauges) recorded by `http4s-prometheus-metrics`
+by using `Prometheus.metricsOpsWithExemplars` and passing an effect that captures the related exemplar labels.

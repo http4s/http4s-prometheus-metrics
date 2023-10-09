@@ -16,10 +16,13 @@
 
 package org.http4s.metrics.prometheus
 
+import cats.Applicative
 import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.apply._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import io.prometheus.client._
 import org.http4s.Method
 import org.http4s.Status
@@ -95,10 +98,32 @@ object Prometheus {
   ): Resource[F, MetricsOps[F]] =
     for {
       metrics <- createMetricsCollection(registry, prefix, responseDurationSecondsHistogramBuckets)
-    } yield createMetricsOps(metrics)
+    } yield createMetricsOps(metrics, Applicative[F].pure(None))
+
+  /** Creates a [[MetricsOps]] that supports Prometheus metrics and records exemplars.
+    *
+    * Warning: The sampler effect is responsible for producing exemplar labels that are valid for the underlying
+    * implementation as errors happening during metric recording will not be handled! For Prometheus version < 1.0,
+    * this means the combined length of keys and values may not exceed 128 characters and the parts must adhere
+    * to the label regex Prometheus defines.
+    *
+    * @param registry a metrics collector registry
+    * @param sampleExemplar an effect that returns the corresponding exemplar labels
+    * @param prefix a prefix that will be added to all metrics
+    */
+  def metricsOpsWithExemplars[F[_]: Sync](
+      registry: CollectorRegistry,
+      sampleExemplar: F[Option[Map[String, String]]],
+      prefix: String = "org_http4s_server",
+      responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
+  ): Resource[F, MetricsOps[F]] =
+    for {
+      metrics <- createMetricsCollection(registry, prefix, responseDurationSecondsHistogramBuckets)
+    } yield createMetricsOps(metrics, sampleExemplar.map(_.map(toFlatArray)))
 
   private def createMetricsOps[F[_]](
-      metrics: MetricsCollection
+      metrics: MetricsCollection,
+      exemplarLabels: F[Option[Array[String]]],
   )(implicit F: Sync[F]): MetricsOps[F] =
     new MetricsOps[F] {
       override def increaseActiveRequests(classifier: Option[String]): F[Unit] =
@@ -120,10 +145,15 @@ object Prometheus {
           elapsed: Long,
           classifier: Option[String],
       ): F[Unit] =
-        F.delay {
-          metrics.responseDuration
-            .labels(label(classifier), reportMethod(method), Phase.report(Phase.Headers))
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.responseDuration
+              .labels(label(classifier), reportMethod(method), Phase.report(Phase.Headers))
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull: _*
+              )
+          }
         }
 
       override def recordTotalTime(
@@ -132,13 +162,18 @@ object Prometheus {
           elapsed: Long,
           classifier: Option[String],
       ): F[Unit] =
-        F.delay {
-          metrics.responseDuration
-            .labels(label(classifier), reportMethod(method), Phase.report(Phase.Body))
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
-          metrics.requests
-            .labels(label(classifier), reportMethod(method), reportStatus(status))
-            .inc()
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.responseDuration
+              .labels(label(classifier), reportMethod(method), Phase.report(Phase.Body))
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull: _*
+              )
+            metrics.requests
+              .labels(label(classifier), reportMethod(method), reportStatus(status))
+              .incWithExemplar(exemplarOpt.orNull: _*)
+          }
         }
 
       override def recordAbnormalTermination(
@@ -154,14 +189,19 @@ object Prometheus {
         }
 
       private def recordCanceled(elapsed: Long, classifier: Option[String]): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Canceled),
-              label(Option.empty),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Canceled),
+                label(Option.empty),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull: _*
+              )
+          }
         }
 
       private def recordAbnormal(
@@ -169,14 +209,19 @@ object Prometheus {
           classifier: Option[String],
           cause: Throwable,
       ): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Abnormal),
-              label(Option(cause.getClass.getName)),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Abnormal),
+                label(Option(cause.getClass.getName)),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull: _*
+              )
+          }
         }
 
       private def recordError(
@@ -184,25 +229,35 @@ object Prometheus {
           classifier: Option[String],
           cause: Throwable,
       ): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Error),
-              label(Option(cause.getClass.getName)),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Error),
+                label(Option(cause.getClass.getName)),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull: _*
+              )
+          }
         }
 
       private def recordTimeout(elapsed: Long, classifier: Option[String]): F[Unit] =
-        F.delay {
-          metrics.abnormalTerminations
-            .labels(
-              label(classifier),
-              AbnormalTermination.report(AbnormalTermination.Timeout),
-              label(Option.empty),
-            )
-            .observe(SimpleTimer.elapsedSecondsFromNanos(0, elapsed))
+        exemplarLabels.flatMap { exemplarOpt =>
+          F.delay {
+            metrics.abnormalTerminations
+              .labels(
+                label(classifier),
+                AbnormalTermination.report(AbnormalTermination.Timeout),
+                label(Option.empty),
+              )
+              .observeWithExemplar(
+                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
+                exemplarOpt.orNull: _*
+              )
+          }
         }
 
       private def label(value: Option[String]): String = value.getOrElse("")
@@ -292,6 +347,18 @@ object Prometheus {
   // https://github.com/prometheus/client_java/blob/parent-0.6.0/simpleclient/src/main/java/io/prometheus/client/Histogram.java#L73
   private val DefaultHistogramBuckets: NonEmptyList[Double] =
     NonEmptyList(.005, List(.01, .025, .05, .075, .1, .25, .5, .75, 1, 2.5, 5, 7.5, 10))
+
+  // Prometheus expects exemplars as alternating key-value strings: k1, v1, k2, v2, ...
+  private def toFlatArray(m: Map[String, String]): Array[String] = {
+    val arr = new Array[String](m.size * 2)
+    var i = 0
+    m.foreach { case (key, value) =>
+      arr(i) = key
+      arr(i + 1) = value
+      i += 2
+    }
+    arr
+  }
 }
 
 final case class MetricsCollection(
