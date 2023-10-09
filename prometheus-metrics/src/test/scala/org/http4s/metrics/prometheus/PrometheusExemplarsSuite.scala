@@ -56,7 +56,7 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
       registry <- Prometheus.collectorRegistry[IO]
       metrics <- Prometheus
         .metricsOpsWithExemplars[IO](registry, IO.pure(Some(exemplar)), "exemplars")
-    } yield (registry, Metrics(metrics)(client))
+    } yield (registry, Metrics[IO](metrics)(client))
   }
 
   def meteredClient(
