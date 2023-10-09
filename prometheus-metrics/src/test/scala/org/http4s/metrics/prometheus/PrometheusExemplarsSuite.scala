@@ -16,13 +16,14 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect._
+import cats.effect.*
 import io.prometheus.client.CollectorRegistry
+import io.prometheus.client.exemplars.Exemplar
 import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.client.Client
 import org.http4s.client.middleware.Metrics
-import org.http4s.metrics.prometheus.util._
+import org.http4s.metrics.prometheus.util.*
 
 class PrometheusExemplarsSuite extends CatsEffectSuite {
   val client: Client[IO] = Client.fromHttpApp[IO](HttpApp[IO](stub))
@@ -30,10 +31,10 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
   meteredClient(exemplar = Map("trace_id" -> "123")).test(
     "A http client with a prometheus metrics middleware should sample an exemplar"
   ) { case (registry, client) =>
-    client.expect[String]("/ok").attempt.map { resp =>
+    client.expect[String]("/ok").map { resp =>
       val filter = new java.util.HashSet[String]()
       filter.add("exemplars_request_count_total")
-      val exemplar = registry
+      val exemplar: Exemplar = registry
         .filteredMetricFamilySamples(filter)
         .nextElement()
         .samples
@@ -42,7 +43,7 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
 
       assertEquals(exemplar.getLabelName(0), "trace_id")
       assertEquals(exemplar.getLabelValue(0), "123")
-      assertEquals(resp, Right("200 OK"))
+      assertEquals(resp, "200 OK")
     }
   }
 
