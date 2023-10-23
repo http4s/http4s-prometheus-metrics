@@ -77,7 +77,7 @@ object PrometheusExportService {
   ): F[Response[F]] = for {
     parsedContentType <- Sync[F].delay(TextFormat.chooseContentType(contentType))
     text <- Sync[F]
-      .delay {
+      .blocking {
         val writer = new NonSafepointingStringWriter()
         TextFormat.writeFormat(
           parsedContentType,
