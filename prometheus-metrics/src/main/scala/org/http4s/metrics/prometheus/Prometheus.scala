@@ -94,9 +94,27 @@ object Prometheus {
     * @param registry a metrics collector registry
     * @param prefix a prefix that will be added to all metrics
     * @param responseDurationSecondsHistogramBuckets the buckets of response duration time in second for Histogram.
-    * @param customLabelsAndValues a list of custom labels and corresponding values, will be added to all metrics entries
     */
   def metricsOps[F[_]: Sync](
+      registry: CollectorRegistry,
+      prefix: String = "org_http4s_server",
+      responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
+  ): Resource[F, MetricsOps[F]] =
+    metricsOpsWithCustomLabels(
+      registry,
+      prefix,
+      responseDurationSecondsHistogramBuckets,
+      List.empty,
+    )
+
+  /** Creates a [[MetricsOps]] that supports Prometheus metrics
+    *
+    * @param registry a metrics collector registry
+    * @param prefix a prefix that will be added to all metrics
+    * @param responseDurationSecondsHistogramBuckets the buckets of response duration time in second for Histogram.
+    * @param customLabelsAndValues a list of custom labels and corresponding values, will be added to all metrics entries
+    */
+  def metricsOpsWithCustomLabels[F[_]: Sync](
       registry: CollectorRegistry,
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
@@ -121,8 +139,36 @@ object Prometheus {
     * @param registry a metrics collector registry
     * @param sampleExemplar an effect that returns the corresponding exemplar labels
     * @param prefix a prefix that will be added to all metrics
+    * @param responseDurationSecondsHistogramBuckets the buckets of response duration time in second for Histogram.
     */
   def metricsOpsWithExemplars[F[_]: Sync](
+      registry: CollectorRegistry,
+      sampleExemplar: F[Option[Map[String, String]]],
+      prefix: String = "org_http4s_server",
+      responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
+  ): Resource[F, MetricsOps[F]] =
+    metricsOpsWithExemplarsWithCustomLabels(
+      registry,
+      sampleExemplar,
+      prefix,
+      responseDurationSecondsHistogramBuckets,
+      List.empty,
+    )
+
+  /** Creates a [[MetricsOps]] that supports Prometheus metrics and records exemplars.
+    *
+    * Warning: The sampler effect is responsible for producing exemplar labels that are valid for the underlying
+    * implementation as errors happening during metric recording will not be handled! For Prometheus version < 1.0,
+    * this means the combined length of keys and values may not exceed 128 characters and the parts must adhere
+    * to the label regex Prometheus defines.
+    *
+    * @param registry a metrics collector registry
+    * @param sampleExemplar an effect that returns the corresponding exemplar labels
+    * @param prefix a prefix that will be added to all metrics
+    * @param responseDurationSecondsHistogramBuckets the buckets of response duration time in second for Histogram.
+    * @param customLabelsAndValues a list of custom labels and corresponding values, will be added to all metrics entries
+    */
+  def metricsOpsWithExemplarsWithCustomLabels[F[_]: Sync](
       registry: CollectorRegistry,
       sampleExemplar: F[Option[Map[String, String]]],
       prefix: String = "org_http4s_server",
