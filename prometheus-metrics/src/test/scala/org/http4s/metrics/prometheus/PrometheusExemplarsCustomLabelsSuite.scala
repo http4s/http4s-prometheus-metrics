@@ -25,7 +25,7 @@ import org.http4s.client.Client
 import org.http4s.client.middleware.Metrics
 import org.http4s.metrics.prometheus.util.*
 
-class PrometheusExemplarsSuite extends CatsEffectSuite {
+class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
   val client: Client[IO] = Client.fromHttpApp[IO](HttpApp[IO](stub))
 
   meteredClient(exemplar = Map("trace_id" -> "123")).test(
@@ -55,7 +55,7 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
     for {
       registry <- Prometheus.collectorRegistry[IO]
       metrics <- Prometheus
-        .metricsOpsWithExemplars[IO](registry, IO.pure(Some(exemplar)), "exemplars")()
+        .metricsOpsWithExemplars[IO](registry, IO.pure(Some(exemplar)), "exemplars")(custLblVals)
     } yield (registry, Metrics[IO](metrics)(client))
   }
 

@@ -16,33 +16,30 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect._
+import cats.effect.*
 import io.prometheus.client.CollectorRegistry
 import munit.CatsEffectSuite
-import org.http4s.HttpApp
-import org.http4s.Request
-import org.http4s.Status
-import org.http4s.client.Client
-import org.http4s.client.UnexpectedStatus
+import org.http4s.{HttpApp, Request, Status}
+import org.http4s.client.{Client, UnexpectedStatus}
 import org.http4s.client.middleware.Metrics
-import org.http4s.dsl.io._
-import org.http4s.metrics.prometheus.util._
-import org.http4s.syntax.literals._
+import org.http4s.dsl.io.*
+import org.http4s.metrics.prometheus.util.*
+import org.http4s.syntax.literals.*
 
 import java.io.IOException
 import java.util.concurrent.TimeoutException
 
-class PrometheusClientMetricsSuite extends CatsEffectSuite {
+class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
   val client: Client[IO] = Client.fromHttpApp[IO](HttpApp[IO](stub))
 
   meteredClient().test(
     "A http client with a prometheus metrics middleware should register a 2xx response"
   ) { case (registry, client) =>
     client.expect[String]("/ok").attempt.map { resp =>
-      assertEquals(count(registry, "2xx_responses", "client"), 1.0)
-      assertEquals(count(registry, "active_requests", "client"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client"), 0.05)
-      assertEquals(count(registry, "2xx_total_duration", "client"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client")(custLblVals), 1.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "client")(custLblVals), 0.05)
+      assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "client")(custLblVals), 0.1)
       assertEquals(resp, Right("200 OK"))
     }
   }
@@ -51,10 +48,10 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
     "A http client with a prometheus metrics middleware should register a 4xx response"
   ) { case (registry, client) =>
     client.expect[String]("/bad-request").attempt.map { resp =>
-      assertEquals(count(registry, "4xx_responses", "client"), 1.0)
-      assertEquals(count(registry, "active_requests", "client"), 0.0)
-      assertEquals(count(registry, "4xx_headers_duration", "client"), 0.05)
-      assertEquals(count(registry, "4xx_total_duration", "client"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "4xx_responses", "client")(custLblVals), 1.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "4xx_headers_duration", "client")(custLblVals), 0.05)
+      assertEquals(cntWithCustLbl(registry, "4xx_total_duration", "client")(custLblVals), 0.1)
       resp match {
         case Left(UnexpectedStatus(status, _, _)) => assertEquals(status, Status.BadRequest)
         case other => fail(s"Unexpected response status: $other")
@@ -66,10 +63,10 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
     "A http client with a prometheus metrics middleware should register a 5xx response"
   ) { case (registry, client) =>
     client.expect[String]("/internal-server-error").attempt.map { resp =>
-      assertEquals(count(registry, "5xx_responses", "client"), 1.0)
-      assertEquals(count(registry, "active_requests", "client"), 0.0)
-      assertEquals(count(registry, "5xx_headers_duration", "client"), 0.05)
-      assertEquals(count(registry, "5xx_total_duration", "client"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "5xx_responses", "client")(custLblVals), 1.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "5xx_headers_duration", "client")(custLblVals), 0.05)
+      assertEquals(cntWithCustLbl(registry, "5xx_total_duration", "client")(custLblVals), 0.1)
       resp match {
         case Left(UnexpectedStatus(status, _, _)) =>
           assertEquals(status, Status.InternalServerError)
@@ -83,10 +80,16 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   ) { case (registry, client) =>
     client.expect[String]("/ok").attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
-      assertEquals(count(registry, "2xx_responses", "client", "get"), 1.0)
-      assertEquals(count(registry, "active_requests", "client", "get"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client", "get"), 0.05)
-      assertEquals(count(registry, "2xx_total_duration", "client", "get"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "get")(custLblVals), 1.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client", "get")(custLblVals), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client", "get")(custLblVals),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client", "get")(custLblVals),
+        0.1,
+      )
     }
   }
 
@@ -95,10 +98,16 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   ) { case (registry, client) =>
     client.expect[String](Request[IO](POST, uri"/ok")).attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
-      assertEquals(count(registry, "2xx_responses", "client", "post"), 1.0)
-      assertEquals(count(registry, "active_requests", "client", "post"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client", "post"), 0.05)
-      assertEquals(count(registry, "2xx_total_duration", "client", "post"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "post")(custLblVals), 1.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client", "post")(custLblVals), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client", "post")(custLblVals),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client", "post")(custLblVals),
+        0.1,
+      )
     }
   }
 
@@ -108,10 +117,16 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
     client.expect[String](Request[IO](PUT, uri"/ok")).attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
 
-      assertEquals(count(registry, "2xx_responses", "client", "put"), 1.0)
-      assertEquals(count(registry, "active_requests", "client", "put"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client", "put"), 0.05)
-      assertEquals(count(registry, "2xx_total_duration", "client", "put"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "put")(custLblVals), 1.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client", "put")(custLblVals), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client", "put")(custLblVals),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client", "put")(custLblVals),
+        0.1,
+      )
     }
   }
 
@@ -121,10 +136,19 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
     client.expect[String](Request[IO](DELETE, uri"/ok")).attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
 
-      assertEquals(count(registry, "2xx_responses", "client", "delete"), 1.0)
-      assertEquals(count(registry, "active_requests", "client", "delete"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client", "delete"), 0.05)
-      assertEquals(count(registry, "2xx_total_duration", "client", "delete"), 0.1)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "delete")(custLblVals), 1.0)
+      assertEquals(
+        cntWithCustLbl(registry, "active_requests", "client", "delete")(custLblVals),
+        0.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client", "delete")(custLblVals),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client", "delete")(custLblVals),
+        0.1,
+      )
     }
   }
 
@@ -133,8 +157,11 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   ) { case (registry, client) =>
     client.expect[String]("/error").attempt.map {
       case Left(_: IOException) =>
-        assertEquals(count(registry, "errors", "client", cause = "java.io.IOException"), 1.0)
-        assertEquals(count(registry, "active_requests", "client"), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "errors", "client", cause = "java.io.IOException")(custLblVals),
+          1.0,
+        )
+        assertEquals(cntWithCustLbl(registry, "active_requests", "client")(custLblVals), 0.0)
       case other => fail(s"Expected an IOException, got: $other")
     }
   }
@@ -144,8 +171,8 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   ) { case (registry, client) =>
     client.expect[String]("/timeout").attempt.map {
       case Left(_: TimeoutException) =>
-        assertEquals(count(registry, "timeouts", "client"), 1.0)
-        assertEquals(count(registry, "active_requests", "client"), 0.0)
+        assertEquals(cntWithCustLbl(registry, "timeouts", "client")(custLblVals), 1.0)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "client")(custLblVals), 0.0)
       case other => fail(s"Expected a TimeoutException, got: $other")
     }
   }
@@ -156,20 +183,34 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
     client.expect[String]("/ok").attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
 
-      assertEquals(count(registry, "2xx_responses", "client", "get", "classifier"), 1.0)
-      assertEquals(count(registry, "active_requests", "client", "get", "classifier"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client", "get", "classifier"), 0.05)
-      assertEquals(count(registry, "2xx_total_duration", "client", "get", "classifier"), 0.1)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_responses", "client", "get", "classifier")(custLblVals),
+        1.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "active_requests", "client", "get", "classifier")(custLblVals),
+        0.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client", "get", "classifier")(
+          custLblVals
+        ),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client", "get", "classifier")(custLblVals),
+        0.1,
+      )
     }
   }
 
   // This tests can't be easily done in munit-cats-effect as it wants to test after the Resource is freed
   meteredClient().test("unregister collectors".ignore) { case (cr, client) =>
     client.expect[String]("/ok").as(cr).map { registry =>
-      assertEquals(count(registry, "2xx_responses", "client"), 0.0)
-      assertEquals(count(registry, "active_requests", "client"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "client"), 0.0)
-      assertEquals(count(registry, "2xx_total_duration", "client"), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "client")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "client")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "client")(custLblVals), 0.0)
     }
   }
 
@@ -180,7 +221,7 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
 
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- Prometheus.metricsOps[IO](registry, "client")()
+      metrics <- Prometheus.metricsOps[IO](registry, "client")(custLblVals)
     } yield (registry, Metrics(metrics, classifier)(client))
   }
 

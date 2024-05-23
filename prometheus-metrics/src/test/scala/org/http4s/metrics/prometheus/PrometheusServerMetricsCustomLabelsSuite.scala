@@ -16,20 +16,17 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect._
+import cats.effect.*
 import io.prometheus.client.CollectorRegistry
 import munit.CatsEffectSuite
-import org.http4s.HttpApp
-import org.http4s.HttpRoutes
 import org.http4s.Method.GET
-import org.http4s.Request
-import org.http4s.Status
-import org.http4s.dsl.io._
-import org.http4s.metrics.prometheus.util._
+import org.http4s.{HttpApp, HttpRoutes, Request, Status}
+import org.http4s.dsl.io.*
+import org.http4s.metrics.prometheus.util.*
 import org.http4s.server.middleware.Metrics
-import org.http4s.syntax.all._
+import org.http4s.syntax.all.*
 
-class PrometheusServerMetricsSuite extends CatsEffectSuite {
+class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
 
   private val testRoutes = HttpRoutes.of[IO](stub)
 
@@ -44,10 +41,10 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
       r.as[String].map { b =>
         assertEquals(b, "200 OK")
         assertEquals(r.status, Status.Ok)
-        assertEquals(count(registry, "2xx_responses", "server"), 1.0)
-        assertEquals(count(registry, "active_requests", "server"), 0.0)
-        assertEquals(count(registry, "2xx_headers_duration", "server"), 0.05)
-        assertEquals(count(registry, "2xx_total_duration", "server"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "2xx_responses", "server")(custLblVals), 1.0)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(custLblVals), 0.0)
+        assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "server")(custLblVals), 0.05)
+        assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "server")(custLblVals), 0.1)
       }
     }
   }
@@ -62,10 +59,10 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assertEquals(r.status, Status.BadRequest)
         assertEquals(b, "400 Bad Request")
 
-        assertEquals(count(registry, "4xx_responses", "server"), 1.0)
-        assertEquals(count(registry, "active_requests", "server"), 0.0)
-        assertEquals(count(registry, "4xx_headers_duration", "server"), 0.05)
-        assertEquals(count(registry, "4xx_total_duration", "server"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "4xx_responses", "server")(custLblVals), 1.0)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(custLblVals), 0.0)
+        assertEquals(cntWithCustLbl(registry, "4xx_headers_duration", "server")(custLblVals), 0.05)
+        assertEquals(cntWithCustLbl(registry, "4xx_total_duration", "server")(custLblVals), 0.1)
       }
     }
   }
@@ -80,10 +77,10 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assertEquals(r.status, Status.InternalServerError)
         assertEquals(b, "500 Internal Server Error")
 
-        assertEquals(count(registry, "5xx_responses", "server"), 1.0)
-        assertEquals(count(registry, "active_requests", "server"), 0.0)
-        assertEquals(count(registry, "5xx_headers_duration", "server"), 0.05)
-        assertEquals(count(registry, "5xx_total_duration", "server"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "5xx_responses", "server")(custLblVals), 1.0)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(custLblVals), 0.0)
+        assertEquals(cntWithCustLbl(registry, "5xx_headers_duration", "server")(custLblVals), 0.05)
+        assertEquals(cntWithCustLbl(registry, "5xx_total_duration", "server")(custLblVals), 0.1)
       }
     }
   }
@@ -98,10 +95,16 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assertEquals(r.status, Status.Ok)
         assertEquals(b, "200 OK")
 
-        assertEquals(count(registry, "2xx_responses", "server", "get"), 1.0)
-        assertEquals(count(registry, "active_requests", "server", "get"), 0.0)
-        assertEquals(count(registry, "2xx_headers_duration", "server", "get"), 0.05)
-        assertEquals(count(registry, "2xx_total_duration", "server", "get"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "2xx_responses", "server", "get")(custLblVals), 1.0)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "server", "get")(custLblVals), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_headers_duration", "server", "get")(custLblVals),
+          0.05,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_total_duration", "server", "get")(custLblVals),
+          0.1,
+        )
       }
     }
   }
@@ -116,10 +119,19 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assertEquals(r.status, Status.Ok)
         assertEquals(b, "200 OK")
 
-        assertEquals(count(registry, "2xx_responses", "server", "post"), 1.0)
-        assertEquals(count(registry, "active_requests", "server", "post"), 0.0)
-        assertEquals(count(registry, "2xx_headers_duration", "server", "post"), 0.05)
-        assertEquals(count(registry, "2xx_total_duration", "server", "post"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "2xx_responses", "server", "post")(custLblVals), 1.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "server", "post")(custLblVals),
+          0.0,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_headers_duration", "server", "post")(custLblVals),
+          0.05,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_total_duration", "server", "post")(custLblVals),
+          0.1,
+        )
       }
     }
   }
@@ -134,10 +146,16 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assertEquals(r.status, Status.Ok)
         assertEquals(b, "200 OK")
 
-        assertEquals(count(registry, "2xx_responses", "server", "put"), 1.0)
-        assertEquals(count(registry, "active_requests", "server", "put"), 0.0)
-        assertEquals(count(registry, "2xx_headers_duration", "server", "put"), 0.05)
-        assertEquals(count(registry, "2xx_total_duration", "server", "put"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "2xx_responses", "server", "put")(custLblVals), 1.0)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "server", "put")(custLblVals), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_headers_duration", "server", "put")(custLblVals),
+          0.05,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_total_duration", "server", "put")(custLblVals),
+          0.1,
+        )
       }
     }
   }
@@ -152,10 +170,22 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assertEquals(r.status, Status.Ok)
         assertEquals(b, "200 OK")
 
-        assertEquals(count(registry, "2xx_responses", "server", "delete"), 1.0)
-        assertEquals(count(registry, "active_requests", "server", "delete"), 0.0)
-        assertEquals(count(registry, "2xx_headers_duration", "server", "delete"), 0.05)
-        assertEquals(count(registry, "2xx_total_duration", "server", "delete"), 0.1)
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_responses", "server", "delete")(custLblVals),
+          1.0,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "server", "delete")(custLblVals),
+          0.0,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_headers_duration", "server", "delete")(custLblVals),
+          0.05,
+        )
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_total_duration", "server", "delete")(custLblVals),
+          0.1,
+        )
       }
     }
   }
@@ -168,10 +198,13 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
     routes.run(req).attempt.map { r =>
       assert(r.isLeft)
 
-      assertEquals(count(registry, "errors", "server", cause = "java.io.IOException"), 1.0)
-      assertEquals(count(registry, "active_requests", "server"), 0.0)
-      assertEquals(count(registry, "5xx_headers_duration", "server"), 0.05)
-      assertEquals(count(registry, "5xx_total_duration", "server"), 0.05)
+      assertEquals(
+        cntWithCustLbl(registry, "errors", "server", cause = "java.io.IOException")(custLblVals),
+        1.0,
+      )
+      assertEquals(cntWithCustLbl(registry, "active_requests", "server")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "5xx_headers_duration", "server")(custLblVals), 0.05)
+      assertEquals(cntWithCustLbl(registry, "5xx_total_duration", "server")(custLblVals), 0.05)
     }
   }
 
@@ -186,12 +219,17 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
         assert(b.isLeft)
 
         assertEquals(
-          count(registry, "abnormal_terminations", "server", cause = "java.lang.RuntimeException"),
+          cntWithCustLbl(
+            registry,
+            "abnormal_terminations",
+            "server",
+            cause = "java.lang.RuntimeException",
+          )(custLblVals),
           1.0,
         )
-        assertEquals(count(registry, "active_requests", "server"), 0.0)
-        assertEquals(count(registry, "2xx_headers_duration", "server"), 0.05)
-        assertEquals(count(registry, "2xx_total_duration", "server"), 0.1)
+        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(custLblVals), 0.0)
+        assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "server")(custLblVals), 0.05)
+        assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "server")(custLblVals), 0.1)
       }
     }
   }
@@ -207,10 +245,26 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
           assertEquals(r.status, Status.Ok)
           assertEquals(b, "200 OK")
 
-          assertEquals(count(registry, "2xx_responses", "server", "get", "classifier"), 1.0)
-          assertEquals(count(registry, "active_requests", "server", "get", "classifier"), 0.0)
-          assertEquals(count(registry, "2xx_headers_duration", "server", "get", "classifier"), 0.05)
-          assertEquals(count(registry, "2xx_total_duration", "server", "get", "classifier"), 0.1)
+          assertEquals(
+            cntWithCustLbl(registry, "2xx_responses", "server", "get", "classifier")(custLblVals),
+            1.0,
+          )
+          assertEquals(
+            cntWithCustLbl(registry, "active_requests", "server", "get", "classifier")(custLblVals),
+            0.0,
+          )
+          assertEquals(
+            cntWithCustLbl(registry, "2xx_headers_duration", "server", "get", "classifier")(
+              custLblVals
+            ),
+            0.05,
+          )
+          assertEquals(
+            cntWithCustLbl(registry, "2xx_total_duration", "server", "get", "classifier")(
+              custLblVals
+            ),
+            0.1,
+          )
         }
       }
   }
@@ -220,10 +274,10 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
     val req = Request[IO](uri = uri"/ok")
 
     routes.run(req).as(cr).map { registry =>
-      assertEquals(count(registry, "2xx_responses", "server"), 0.0)
-      assertEquals(count(registry, "active_requests", "server"), 0.0)
-      assertEquals(count(registry, "2xx_headers_duration", "server"), 0.0)
-      assertEquals(count(registry, "2xx_total_duration", "server"), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_responses", "server")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "active_requests", "server")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "server")(custLblVals), 0.0)
+      assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "server")(custLblVals), 0.0)
     }
   }
 
@@ -233,7 +287,7 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
     implicit val clock: Clock[IO] = FakeClock[IO]
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- Prometheus.metricsOps[IO](registry, "server")()
+      metrics <- Prometheus.metricsOps[IO](registry, "server")(custLblVals)
     } yield (registry, Metrics(metrics, classifierF = classifier)(testRoutes).orNotFound)
   }
 
