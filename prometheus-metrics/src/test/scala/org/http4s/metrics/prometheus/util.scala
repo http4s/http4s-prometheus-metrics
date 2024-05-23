@@ -16,15 +16,19 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect.{Clock, IO, Sync}
+import cats.effect.Clock
+import cats.effect.IO
+import cats.effect.Sync
 import fs2.Stream
 import io.prometheus.client.CollectorRegistry
 import org.http4s.Method.GET
-import org.http4s.{Request, Response}
+import org.http4s.Request
+import org.http4s.Response
 import org.http4s.dsl.io.*
 
 import java.io.IOException
-import java.util.concurrent.{TimeUnit, TimeoutException}
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 object util {
