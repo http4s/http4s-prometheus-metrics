@@ -20,11 +20,11 @@ import cats.effect.*
 import io.prometheus.client.CollectorRegistry
 import munit.CatsEffectSuite
 import org.http4s.Method.GET
-import org.http4s.{HttpApp, HttpRoutes, Request, Status}
 import org.http4s.dsl.io.*
 import org.http4s.metrics.prometheus.util.*
 import org.http4s.server.middleware.Metrics
 import org.http4s.syntax.all.*
+import org.http4s.{HttpApp, HttpRoutes, Request, Status}
 
 class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
 

@@ -19,12 +19,12 @@ package org.http4s.metrics.prometheus
 import cats.effect.*
 import io.prometheus.client.CollectorRegistry
 import munit.CatsEffectSuite
-import org.http4s.{HttpApp, Request, Status}
-import org.http4s.client.{Client, UnexpectedStatus}
 import org.http4s.client.middleware.Metrics
+import org.http4s.client.{Client, UnexpectedStatus}
 import org.http4s.dsl.io.*
 import org.http4s.metrics.prometheus.util.*
 import org.http4s.syntax.literals.*
+import org.http4s.{HttpApp, Request, Status}
 
 import java.io.IOException
 import java.util.concurrent.TimeoutException
