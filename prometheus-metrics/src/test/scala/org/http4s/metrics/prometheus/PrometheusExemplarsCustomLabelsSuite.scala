@@ -55,7 +55,12 @@ class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
     for {
       registry <- Prometheus.collectorRegistry[IO]
       metrics <- Prometheus
-        .metricsOpsWithExemplars[IO](registry, IO.pure(Some(exemplar)), "exemplars")(custLblVals)
+        .metricsOpsWithExemplars[IO](
+          registry,
+          IO.pure(Some(exemplar)),
+          "exemplars",
+          customLabelsAndValues = custLblVals,
+        )
     } yield (registry, Metrics[IO](metrics)(client))
   }
 

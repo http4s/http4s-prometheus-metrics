@@ -180,7 +180,7 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
 
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- Prometheus.metricsOps[IO](registry, "client")()
+      metrics <- Prometheus.metricsOps[IO](registry, "client")
     } yield (registry, Metrics(metrics, classifier)(client))
   }
 

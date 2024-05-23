@@ -100,8 +100,7 @@ object Prometheus {
       registry: CollectorRegistry,
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
-  )(
-      customLabelsAndValues: List[(String, String)] = List()
+      customLabelsAndValues: List[(String, String)] = List.empty,
   ): Resource[F, MetricsOps[F]] =
     for {
       metrics <- createMetricsCollection(
@@ -128,8 +127,7 @@ object Prometheus {
       sampleExemplar: F[Option[Map[String, String]]],
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
-  )(
-      customLabelsAndValues: List[(String, String)] = List()
+      customLabelsAndValues: List[(String, String)] = List.empty,
   ): Resource[F, MetricsOps[F]] =
     for {
       metrics <- createMetricsCollection(
