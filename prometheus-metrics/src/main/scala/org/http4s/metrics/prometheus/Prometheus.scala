@@ -146,11 +146,10 @@ final class Prometheus[F[_]: Sync] private (
           Sync[F].delay {
             metrics.responseDuration
               .labels(
-                List(
-                  label(classifier),
-                  reportMethod(method),
-                  Phase.report(Phase.Headers),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  reportMethod(method) +:
+                  Phase.report(Phase.Headers) +:
+                  customLabels: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -169,11 +168,10 @@ final class Prometheus[F[_]: Sync] private (
           Sync[F].delay {
             metrics.responseDuration
               .labels(
-                List(
-                  label(classifier),
-                  reportMethod(method),
-                  Phase.report(Phase.Body),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  reportMethod(method) +:
+                  Phase.report(Phase.Body) +:
+                  customLabels: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -181,11 +179,10 @@ final class Prometheus[F[_]: Sync] private (
               )
             metrics.requests
               .labels(
-                List(
-                  label(classifier),
-                  reportMethod(method),
-                  reportStatus(status),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  reportMethod(method) +:
+                  reportStatus(status) +:
+                  customLabels: _*
               )
               .incWithExemplar(exemplarOpt.orNull: _*)
           }
@@ -208,11 +205,10 @@ final class Prometheus[F[_]: Sync] private (
           Sync[F].delay {
             metrics.abnormalTerminations
               .labels(
-                List(
-                  label(classifier),
-                  AbnormalTermination.report(AbnormalTermination.Canceled),
-                  label(Option.empty),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  AbnormalTermination.report(AbnormalTermination.Canceled) +:
+                  label(Option.empty) +:
+                  customLabels: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -230,11 +226,10 @@ final class Prometheus[F[_]: Sync] private (
           Sync[F].delay {
             metrics.abnormalTerminations
               .labels(
-                List(
-                  label(classifier),
-                  AbnormalTermination.report(AbnormalTermination.Abnormal),
-                  label(Option(cause.getClass.getName)),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  AbnormalTermination.report(AbnormalTermination.Abnormal) +:
+                  label(Option(cause.getClass.getName)) +:
+                  customLabels: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -252,11 +247,10 @@ final class Prometheus[F[_]: Sync] private (
           Sync[F].delay {
             metrics.abnormalTerminations
               .labels(
-                List(
-                  label(classifier),
-                  AbnormalTermination.report(AbnormalTermination.Error),
-                  label(Option(cause.getClass.getName)),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  AbnormalTermination.report(AbnormalTermination.Error) +:
+                  label(Option(cause.getClass.getName)) +:
+                  customLabels: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -270,11 +264,10 @@ final class Prometheus[F[_]: Sync] private (
           Sync[F].delay {
             metrics.abnormalTerminations
               .labels(
-                List(
-                  label(classifier),
-                  AbnormalTermination.report(AbnormalTermination.Timeout),
-                  label(Option.empty),
-                ) ++ customLabels: _*
+                label(classifier) +:
+                  AbnormalTermination.report(AbnormalTermination.Timeout) +:
+                  label(Option.empty) +:
+                  customLabels: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -320,7 +313,7 @@ final class Prometheus[F[_]: Sync] private (
         .buckets(responseDurationSecondsHistogramBuckets.toList: _*)
         .name(prefix + "_" + "response_duration_seconds")
         .help("Response Duration in seconds.")
-        .labelNames(List("classifier", "method", "phase") ++ customLabels: _*)
+        .labelNames("classifier" +: "method" +: "phase" +: customLabels: _*)
         .create(),
       registry,
     )
@@ -340,7 +333,7 @@ final class Prometheus[F[_]: Sync] private (
         .build()
         .name(prefix + "_" + "request_count")
         .help("Total Requests.")
-        .labelNames(List("classifier", "method", "status") ++ customLabels: _*)
+        .labelNames("classifier" +: "method" +: "status" +: customLabels: _*)
         .create(),
       registry,
     )
@@ -350,7 +343,7 @@ final class Prometheus[F[_]: Sync] private (
         .build()
         .name(prefix + "_" + "abnormal_terminations")
         .help("Total Abnormal Terminations.")
-        .labelNames(List("classifier", "termination_type", "cause") ++ customLabels: _*)
+        .labelNames("classifier" +: "termination_type" +: "cause" +: customLabels: _*)
         .create(),
       registry,
     )
