@@ -35,11 +35,6 @@ class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/ok").map { resp =>
       val filter = new java.util.HashSet[String]()
       filter.add("exemplars_request_count_total")
-      val emfSamples = registry
-        .filteredMetricFamilySamples(filter)
-      val mfSamples = emfSamples.nextElement()
-      val samples = mfSamples.samples
-      val get0 = samples.get(0)
       val exemplar: Exemplar = registry
         .filteredMetricFamilySamples(filter)
         .nextElement()
