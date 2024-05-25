@@ -21,7 +21,7 @@ import cats.effect.{Resource, Sync}
 import cats.syntax.all.*
 import io.prometheus.client.*
 import org.http4s.metrics.TerminationType.{Abnormal, Canceled, Error, Timeout}
-import org.http4s.metrics.prometheus.MetricsOpsBuilder.{registerCollector, toFlatArray}
+import org.http4s.metrics.prometheus.Prometheus.{registerCollector, toFlatArray}
 import org.http4s.metrics.{MetricsOps, TerminationType}
 import org.http4s.{Method, Status}
 
@@ -77,14 +77,13 @@ import org.http4s.{Method, Status}
   * custom labels: custom labels, provided by customLabelsAndValues.map(_._1)
   * values: custom label values, provided by customLabelsAndValues.map(_._2)
   */
-final class MetricsOpsBuilder[F[_]: Sync] private (
+final class Prometheus[F[_]: Sync] private (
     private val prefix: String,
     private val registry: CollectorRegistry,
     private val sampleExemplar: F[Option[Map[String, String]]],
     private val customLabelsAndValues: List[(String, String)],
     private val responseDurationSecondsHistogramBuckets: NonEmptyList[Double],
 ) { self =>
-
   private def copy(
       prefix: String = self.prefix,
       registry: CollectorRegistry = self.registry,
@@ -92,8 +91,8 @@ final class MetricsOpsBuilder[F[_]: Sync] private (
       customLabelsAndValues: List[(String, String)] = self.customLabelsAndValues,
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] =
         self.responseDurationSecondsHistogramBuckets,
-  ): MetricsOpsBuilder[F] =
-    new MetricsOpsBuilder[F](
+  ): Prometheus[F] =
+    new Prometheus[F](
       prefix = prefix,
       registry = registry,
       sampleExemplar = sampleExemplar,
@@ -101,23 +100,23 @@ final class MetricsOpsBuilder[F[_]: Sync] private (
       responseDurationSecondsHistogramBuckets = responseDurationSecondsHistogramBuckets,
     )
 
-  def withPrefix(prefix: String): MetricsOpsBuilder[F] = copy(prefix = prefix)
-  def withRegister(registry: CollectorRegistry): MetricsOpsBuilder[F] = copy(registry = registry)
+  def withPrefix(prefix: String): Prometheus[F] = copy(prefix = prefix)
+  def withRegister(registry: CollectorRegistry): Prometheus[F] = copy(registry = registry)
 
-  def withSampleExemplar(sampleExemplar: F[Option[Map[String, String]]]): MetricsOpsBuilder[F] =
+  def withSampleExemplar(sampleExemplar: F[Option[Map[String, String]]]): Prometheus[F] =
     copy(sampleExemplar = sampleExemplar)
 
   def withCustomLabelsAndValues(
       customLabelsAndValues: List[(String, String)]
-  ): MetricsOpsBuilder[F] = copy(customLabelsAndValues = customLabelsAndValues)
+  ): Prometheus[F] = copy(customLabelsAndValues = customLabelsAndValues)
 
   def withResponseDurationSecondsHistogramBuckets(
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double]
-  ): MetricsOpsBuilder[F] =
+  ): Prometheus[F] =
     copy(responseDurationSecondsHistogramBuckets = responseDurationSecondsHistogramBuckets)
 
-  /** Creates a [[MetricsOps]] that supports Prometheus metrics */
-  def metricsOps: Resource[F, MetricsOps[F]] = createMetricsCollection.map(createMetricsOps)
+  /** Build a [[MetricsOps]] that supports Prometheus metrics */
+  def build: Resource[F, MetricsOps[F]] = createMetricsCollection.map(createMetricsOps)
 
   private def createMetricsOps(metrics: MetricsCollection): MetricsOps[F] = {
     val customLabels: List[String] = customLabelsAndValues.map(_._2)
@@ -360,7 +359,7 @@ final class MetricsOpsBuilder[F[_]: Sync] private (
   }
 }
 
-object MetricsOpsBuilder {
+object Prometheus {
   def collectorRegistry[F[_]](implicit F: Sync[F]): Resource[F, CollectorRegistry] =
     Resource.make(F.delay(new CollectorRegistry()))(cr => F.blocking(cr.clear()))
 
@@ -374,11 +373,11 @@ object MetricsOpsBuilder {
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
   ): Resource[F, MetricsOps[F]] =
-    MetricsOpsBuilder
+    Prometheus
       .default(registry)
       .withPrefix(prefix)
       .withResponseDurationSecondsHistogramBuckets(responseDurationSecondsHistogramBuckets)
-      .metricsOps
+      .build
 
   /** Creates a [[MetricsOps]] that supports Prometheus metrics and records exemplars.
     *
@@ -397,12 +396,12 @@ object MetricsOpsBuilder {
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
   ): Resource[F, MetricsOps[F]] =
-    MetricsOpsBuilder
+    Prometheus
       .default[F](registry)
       .withPrefix(prefix)
       .withSampleExemplar(sampleExemplar)
       .withResponseDurationSecondsHistogramBuckets(responseDurationSecondsHistogramBuckets)
-      .metricsOps
+      .build
 
   private[prometheus] def registerCollector[F[_], C <: Collector](
       collector: C,
@@ -429,7 +428,7 @@ object MetricsOpsBuilder {
   }
 
   def default[F[_]: Sync](registry: CollectorRegistry) =
-    new MetricsOpsBuilder[F](
+    new Prometheus[F](
       prefix = "org_http4s_server",
       registry = registry,
       sampleExemplar = Option.empty[Map[String, String]].pure,

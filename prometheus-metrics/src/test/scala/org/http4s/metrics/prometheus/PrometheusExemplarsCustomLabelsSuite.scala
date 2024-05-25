@@ -23,7 +23,7 @@ import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.client.Client
 import org.http4s.client.middleware.Metrics
-import org.http4s.metrics.prometheus.MetricsOpsBuilder.DefaultHistogramBuckets
+import org.http4s.metrics.prometheus.Prometheus.DefaultHistogramBuckets
 import org.http4s.metrics.prometheus.util.*
 
 class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
@@ -55,13 +55,13 @@ class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
 
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- MetricsOpsBuilder
+      metrics <- Prometheus
         .default[IO](registry)
         .withPrefix("exemplars")
         .withSampleExemplar(IO.pure(Some(exemplar)))
         .withCustomLabelsAndValues(custLblVals)
         .withResponseDurationSecondsHistogramBuckets(DefaultHistogramBuckets)
-        .metricsOps
+        .build
     } yield (registry, Metrics[IO](metrics)(client))
   }
 
