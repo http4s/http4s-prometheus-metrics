@@ -126,21 +126,21 @@ final class Prometheus[F[_]: Sync] private (
   def build: Resource[F, MetricsOps[F]] = createMetricsCollection.map(createMetricsOps)
 
   private def createMetricsOps(metrics: MetricsCollection): MetricsOps[F] = {
-    val customLabels: List[String] = customLabelsAndValues.map(_._2)
+    val customLabelValues: List[String] = customLabelsAndValues.map(_._2)
     val exemplarLabels: F[Option[Array[String]]] = sampleExemplar.map(_.map(toFlatArray))
 
     new MetricsOps[F] {
       override def increaseActiveRequests(classifier: Option[String]): F[Unit] =
         Sync[F].delay {
           metrics.activeRequests
-            .labels(label(classifier) +: customLabels: _*)
+            .labels(label(classifier) +: customLabelValues: _*)
             .inc()
         }
 
       override def decreaseActiveRequests(classifier: Option[String]): F[Unit] =
         Sync[F].delay {
           metrics.activeRequests
-            .labels(label(classifier) +: customLabels: _*)
+            .labels(label(classifier) +: customLabelValues: _*)
             .dec()
         }
 
@@ -156,7 +156,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   reportMethod(method) +:
                   Phase.report(Phase.Headers) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -178,7 +178,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   reportMethod(method) +:
                   Phase.report(Phase.Body) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -189,7 +189,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   reportMethod(method) +:
                   reportStatus(status) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .incWithExemplar(exemplarOpt.orNull: _*)
           }
@@ -215,7 +215,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Canceled) +:
                   label(Option.empty) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -236,7 +236,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Abnormal) +:
                   label(Option(cause.getClass.getName)) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -257,7 +257,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Error) +:
                   label(Option(cause.getClass.getName)) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
@@ -274,7 +274,7 @@ final class Prometheus[F[_]: Sync] private (
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Timeout) +:
                   label(Option.empty) +:
-                  customLabels: _*
+                  customLabelValues: _*
               )
               .observeWithExemplar(
                 SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
