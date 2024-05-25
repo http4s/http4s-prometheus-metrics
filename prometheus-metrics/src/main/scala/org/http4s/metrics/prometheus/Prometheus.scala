@@ -17,13 +17,20 @@
 package org.http4s.metrics.prometheus
 
 import cats.data.NonEmptyList
-import cats.effect.{Resource, Sync}
+import cats.effect.Resource
+import cats.effect.Sync
 import cats.syntax.all.*
 import io.prometheus.client.*
-import org.http4s.metrics.TerminationType.{Abnormal, Canceled, Error, Timeout}
-import org.http4s.metrics.prometheus.Prometheus.{registerCollector, toFlatArray}
-import org.http4s.metrics.{MetricsOps, TerminationType}
-import org.http4s.{Method, Status}
+import org.http4s.Method
+import org.http4s.Status
+import org.http4s.metrics.MetricsOps
+import org.http4s.metrics.TerminationType
+import org.http4s.metrics.TerminationType.Abnormal
+import org.http4s.metrics.TerminationType.Canceled
+import org.http4s.metrics.TerminationType.Error
+import org.http4s.metrics.TerminationType.Timeout
+import org.http4s.metrics.prometheus.Prometheus.registerCollector
+import org.http4s.metrics.prometheus.Prometheus.toFlatArray
 
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
   *
