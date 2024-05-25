@@ -224,8 +224,11 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
 
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- Prometheus
-        .metricsOpsWithCustomLabels[IO](registry, "client", customLabelsAndValues = custLblVals)
+      metrics <- MetricsOpsBuilder
+        .default[IO](registry)
+        .withPrefix("client")
+        .withCustomLabelsAndValues(custLblVals)
+        .metricsOps
     } yield (registry, Metrics(metrics, classifier)(client))
   }
 

@@ -23,6 +23,7 @@ import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.client.Client
 import org.http4s.client.middleware.Metrics
+import org.http4s.metrics.prometheus.MetricsOpsBuilder.DefaultHistogramBuckets
 import org.http4s.metrics.prometheus.util.*
 
 class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
@@ -34,6 +35,11 @@ class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/ok").map { resp =>
       val filter = new java.util.HashSet[String]()
       filter.add("exemplars_request_count_total")
+      val emfSamples = registry
+        .filteredMetricFamilySamples(filter)
+      val mfSamples = emfSamples.nextElement()
+      val samples = mfSamples.samples
+      val get0 = samples.get(0)
       val exemplar: Exemplar = registry
         .filteredMetricFamilySamples(filter)
         .nextElement()
@@ -54,13 +60,13 @@ class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
 
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- Prometheus
-        .metricsOpsWithExemplarsWithCustomLabels[IO](
-          registry,
-          IO.pure(Some(exemplar)),
-          "exemplars",
-          customLabelsAndValues = custLblVals,
-        )
+      metrics <- MetricsOpsBuilder
+        .default[IO](registry)
+        .withPrefix("exemplars")
+        .withSampleExemplar(IO.pure(Some(exemplar)))
+        .withCustomLabelsAndValues(custLblVals)
+        .withResponseDurationSecondsHistogramBuckets(DefaultHistogramBuckets)
+        .metricsOps
     } yield (registry, Metrics[IO](metrics)(client))
   }
 

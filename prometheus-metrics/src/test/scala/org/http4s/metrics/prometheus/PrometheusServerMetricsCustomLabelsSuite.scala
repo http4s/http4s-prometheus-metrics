@@ -290,8 +290,11 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
     implicit val clock: Clock[IO] = FakeClock[IO]
     for {
       registry <- Prometheus.collectorRegistry[IO]
-      metrics <- Prometheus
-        .metricsOpsWithCustomLabels[IO](registry, "server", customLabelsAndValues = custLblVals)
+      metrics <- MetricsOpsBuilder
+        .default[IO](registry)
+        .withPrefix("server")
+        .withCustomLabelsAndValues(custLblVals)
+        .metricsOps
     } yield (registry, Metrics(metrics, classifierF = classifier)(testRoutes).orNotFound)
   }
 
