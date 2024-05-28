@@ -24,7 +24,7 @@ import io.prometheus.client.CollectorRegistry
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Response
-import org.http4s.dsl.io._
+import org.http4s.dsl.io.*
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -32,6 +32,12 @@ import java.util.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 object util {
+  val custLblVals: List[(String, String)] = List(
+    "provider" -> "Comcast",
+    "customLabel2" -> "test-custom-label12",
+    "customLabel3" -> "test-custom-label13",
+  )
+
   def stub: PartialFunction[Request[IO], IO[Response[IO]]] = {
     case (GET | POST | PUT | DELETE) -> Root / "ok" =>
       Ok("200 OK")
@@ -61,95 +67,117 @@ object util {
       classifier: String = "",
       cause: String = "",
   ): Double =
+    cntWithCustLbl(
+      registry,
+      name,
+      prefix,
+      method,
+      classifier,
+      cause,
+    )(Seq.empty)
+
+  def cntWithCustLbl(
+      registry: CollectorRegistry,
+      name: String,
+      prefix: String,
+      method: String = "get",
+      classifier: String = "",
+      cause: String = "",
+  )(
+      customLabelAndValues: Seq[(String, String)]
+  ): Double = {
+    val customLabels = customLabelAndValues.map(_._1)
+    val customValues: Seq[String] = customLabelAndValues.map(_._2)
     name match {
       case "active_requests" =>
         registry.getSampleValue(
           s"${prefix}_active_request_count",
-          Array("classifier"),
-          Array(classifier),
+          Array("classifier") ++ customLabels,
+          Array(classifier) ++ customValues,
         )
       case "2xx_responses" =>
         registry
           .getSampleValue(
             s"${prefix}_request_count_total",
-            Array("classifier", "method", "status"),
-            Array(classifier, method, "2xx"),
+            Array("classifier", "method", "status") ++ customLabels,
+            Array(classifier, method, "2xx") ++ customValues,
           )
       case "2xx_headers_duration" =>
         registry.getSampleValue(
           s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase"),
-          Array(classifier, method, "headers"),
+          Array("classifier", "method", "phase") ++ customLabels,
+          Array(classifier, method, "headers") ++ customValues,
         )
       case "2xx_total_duration" =>
         registry.getSampleValue(
           s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase"),
-          Array(classifier, method, "body"),
+          Array("classifier", "method", "phase") ++ customLabels,
+          Array(classifier, method, "body") ++ customValues,
         )
       case "4xx_responses" =>
         registry
           .getSampleValue(
             s"${prefix}_request_count_total",
-            Array("classifier", "method", "status"),
-            Array(classifier, method, "4xx"),
+            Array("classifier", "method", "status") ++ customLabels,
+            Array(classifier, method, "4xx") ++ customValues,
           )
       case "4xx_headers_duration" =>
         registry.getSampleValue(
           s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase"),
-          Array(classifier, method, "headers"),
+          Array("classifier", "method", "phase") ++ customLabels,
+          Array(classifier, method, "headers") ++ customValues,
         )
       case "4xx_total_duration" =>
         registry.getSampleValue(
           s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase"),
-          Array(classifier, method, "body"),
+          Array("classifier", "method", "phase") ++ customLabels,
+          Array(classifier, method, "body") ++ customValues,
         )
       case "5xx_responses" =>
         registry
           .getSampleValue(
             s"${prefix}_request_count_total",
-            Array("classifier", "method", "status"),
-            Array(classifier, method, "5xx"),
+            Array("classifier", "method", "status") ++ customLabels,
+            Array(classifier, method, "5xx") ++ customValues,
           )
       case "5xx_headers_duration" =>
         registry.getSampleValue(
           s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase"),
-          Array(classifier, method, "headers"),
+          Array("classifier", "method", "phase") ++ customLabels,
+          Array(classifier, method, "headers") ++ customValues,
         )
       case "5xx_total_duration" =>
         registry.getSampleValue(
           s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase"),
-          Array(classifier, method, "body"),
+          Array("classifier", "method", "phase") ++ customLabels,
+          Array(classifier, method, "body") ++ customValues,
         )
       case "errors" =>
         registry.getSampleValue(
           s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause"),
-          Array(classifier, "error", cause),
+          Array("classifier", "termination_type", "cause") ++ customLabels,
+          Array(classifier, "error", cause) ++ customValues,
         )
       case "timeouts" =>
         registry.getSampleValue(
           s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause"),
-          Array(classifier, "timeout", cause),
+          Array("classifier", "termination_type", "cause") ++ customLabels,
+          Array(classifier, "timeout", cause) ++ customValues,
         )
       case "abnormal_terminations" =>
         registry.getSampleValue(
           s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause"),
-          Array(classifier, "abnormal", cause),
+          Array("classifier", "termination_type", "cause") ++ customLabels,
+          Array(classifier, "abnormal", cause) ++ customValues,
         )
       case "cancels" =>
         registry.getSampleValue(
           s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause"),
-          Array(classifier, "cancel", cause),
+          Array("classifier", "termination_type", "cause") ++ customLabels,
+          Array(classifier, "cancel", cause) ++ customValues,
         )
     }
+  }
 
   object FakeClock {
     def apply[F[_]: Sync]: Clock[F] =
