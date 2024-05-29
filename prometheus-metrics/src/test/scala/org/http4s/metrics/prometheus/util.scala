@@ -24,7 +24,7 @@ import io.prometheus.client.CollectorRegistry
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Response
-import org.http4s.dsl.io.*
+import org.http4s.dsl.io._
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit

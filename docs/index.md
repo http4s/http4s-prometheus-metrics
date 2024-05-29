@@ -30,6 +30,9 @@ val meteredRouter: Resource[IO, HttpRoutes[IO]] =
   } yield router
 ```
 
+### Example Project
+Refer to [this example project](https://github.com/martinprobson/http4s_prometheus_example) that publishes the default server metrics and exposes them on a sample Grafana dashboard. 
+
 ## Client example
 
 ```scala mdoc:reset:silent
