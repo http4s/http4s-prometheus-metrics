@@ -16,7 +16,7 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect.*
+import cats.effect._
 import io.prometheus.client.CollectorRegistry
 import munit.CatsEffectSuite
 import org.http4s.HttpApp
@@ -25,9 +25,9 @@ import org.http4s.Status
 import org.http4s.client.Client
 import org.http4s.client.UnexpectedStatus
 import org.http4s.client.middleware.Metrics
-import org.http4s.dsl.io.*
-import org.http4s.metrics.prometheus.util.*
-import org.http4s.syntax.literals.*
+import org.http4s.dsl.io._
+import org.http4s.metrics.prometheus.util._
+import org.http4s.syntax.literals._
 
 import java.io.IOException
 import java.util.concurrent.TimeoutException
