@@ -19,8 +19,8 @@ package org.http4s.metrics.prometheus
 import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
-import cats.syntax.all.*
-import io.prometheus.client.*
+import cats.syntax.all._
+import io.prometheus.client._
 import org.http4s.Method
 import org.http4s.Status
 import org.http4s.metrics.MetricsOps

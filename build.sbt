@@ -3,9 +3,10 @@ ThisBuild / developers := List(
   tlGitHubDev("rossabaker", "Ross A. Baker")
 )
 
-val Scala213 = "2.13.12"
+val Scala213 = "2.13.14"
 ThisBuild / crossScalaVersions := Seq("2.12.19", Scala213, "3.3.3")
 ThisBuild / scalaVersion := Scala213
+ThisBuild / startYear := Some(2018)
 
 lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins(NoPublishPlugin)
 
@@ -19,7 +20,6 @@ lazy val prometheusMetrics = project
   .settings(
     name := "http4s-prometheus-metrics",
     description := "Support for Prometheus Metrics",
-    startYear := Some(2018),
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-core" % http4sVersion,
       "io.prometheus" % "simpleclient" % prometheusVersion,
