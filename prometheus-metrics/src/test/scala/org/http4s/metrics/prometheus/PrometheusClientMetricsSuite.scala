@@ -187,5 +187,5 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   def meteredClient(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
   ): SyncIO[FunFixture[(CollectorRegistry, Client[IO])]] =
-    ResourceFixture(buildMeteredClient(classifier))
+    ResourceFunFixture(buildMeteredClient(classifier))
 }

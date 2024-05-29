@@ -240,5 +240,5 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
   def meteredRoutes(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
   ): SyncIO[FunFixture[(CollectorRegistry, HttpApp[IO])]] =
-    ResourceFixture(buildMeteredRoutes(classifier))
+    ResourceFunFixture(buildMeteredRoutes(classifier))
 }
