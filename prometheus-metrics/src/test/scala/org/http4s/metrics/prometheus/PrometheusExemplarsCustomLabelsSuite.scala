@@ -68,5 +68,5 @@ class PrometheusExemplarsCustomLabelsSuite extends CatsEffectSuite {
   def meteredClient(
       exemplar: Map[String, String]
   ): SyncIO[FunFixture[(CollectorRegistry, Client[IO])]] =
-    ResourceFixture(buildMeteredClient(exemplar))
+    ResourceFunFixture(buildMeteredClient(exemplar))
 }

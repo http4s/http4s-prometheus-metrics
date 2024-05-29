@@ -12,8 +12,8 @@ lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins
 
 val http4sVersion = "0.23.27"
 val prometheusVersion = "0.16.0"
-val munitVersion = "0.7.29"
-val munitCatsEffectVersion = "1.0.7"
+val munitVersion = "1.0.0"
+val munitCatsEffectVersion = "2.0.0"
 
 lazy val prometheusMetrics = project
   .in(file("prometheus-metrics"))
@@ -26,7 +26,7 @@ lazy val prometheusMetrics = project
       "io.prometheus" % "simpleclient_common" % prometheusVersion,
       "io.prometheus" % "simpleclient_hotspot" % prometheusVersion,
       "org.scalameta" %%% "munit-scalacheck" % munitVersion % Test,
-      "org.typelevel" %%% "munit-cats-effect-3" % munitCatsEffectVersion % Test,
+      "org.typelevel" %%% "munit-cats-effect" % munitCatsEffectVersion % Test,
       "org.http4s" %%% "http4s-server" % http4sVersion % Test,
       "org.http4s" %%% "http4s-client" % http4sVersion % Test,
       "org.http4s" %%% "http4s-dsl" % http4sVersion % Test,
