@@ -126,11 +126,17 @@ final class Prometheus[F[_]: Sync] private (
   def build: Resource[F, MetricsOps[F]] = createMetricsCollection.map(createMetricsOps)
 
   private def createMetricsOps(metrics: MetricsCollection): MetricsOps[F] = {
-    val customLabelValues: List[String] = customLabelsAndValues.map(_._2)
+    val defaultCustLblVals: List[String] = customLabelsAndValues.map(_._2)
     val exemplarLabels: F[Option[Array[String]]] = sampleExemplar.map(_.map(toFlatArray))
 
     new MetricsOps[F] {
       override def increaseActiveRequests(classifier: Option[String]): F[Unit] =
+        increaseActiveRequests(classifier, defaultCustLblVals)
+
+      override def increaseActiveRequests(
+          classifier: Option[String],
+          customLabelValues: List[String],
+      ): F[Unit] =
         Sync[F].delay {
           metrics.activeRequests
             .labels(label(classifier) +: customLabelValues: _*)
@@ -138,6 +144,12 @@ final class Prometheus[F[_]: Sync] private (
         }
 
       override def decreaseActiveRequests(classifier: Option[String]): F[Unit] =
+        decreaseActiveRequests(classifier, defaultCustLblVals)
+
+      override def decreaseActiveRequests(
+          classifier: Option[String],
+          customLabelValues: List[String],
+      ): F[Unit] =
         Sync[F].delay {
           metrics.activeRequests
             .labels(label(classifier) +: customLabelValues: _*)
@@ -148,6 +160,14 @@ final class Prometheus[F[_]: Sync] private (
           method: Method,
           elapsed: Long,
           classifier: Option[String],
+      ): F[Unit] =
+        recordHeadersTime(method, elapsed, classifier, defaultCustLblVals)
+
+      override def recordHeadersTime(
+          method: Method,
+          elapsed: Long,
+          classifier: Option[String],
+          customLabelValues: List[String],
       ): F[Unit] =
         exemplarLabels.flatMap { exemplarOpt =>
           Sync[F].delay {
@@ -170,6 +190,14 @@ final class Prometheus[F[_]: Sync] private (
           status: Status,
           elapsed: Long,
           classifier: Option[String],
+      ): F[Unit] = recordTotalTime(method, status, elapsed, classifier, defaultCustLblVals)
+
+      override def recordTotalTime(
+          method: Method,
+          status: Status,
+          elapsed: Long,
+          classifier: Option[String],
+          customLabelValues: List[String],
       ): F[Unit] =
         exemplarLabels.flatMap { exemplarOpt =>
           Sync[F].delay {
@@ -200,14 +228,26 @@ final class Prometheus[F[_]: Sync] private (
           terminationType: TerminationType,
           classifier: Option[String],
       ): F[Unit] =
+        recordAbnormalTermination(elapsed, terminationType, classifier, defaultCustLblVals)
+
+      override def recordAbnormalTermination(
+          elapsed: Long,
+          terminationType: TerminationType,
+          classifier: Option[String],
+          customLabelValues: List[String],
+      ): F[Unit] =
         terminationType match {
-          case Abnormal(e) => recordAbnormal(elapsed, classifier, e)
-          case Error(e) => recordError(elapsed, classifier, e)
-          case Canceled => recordCanceled(elapsed, classifier)
-          case Timeout => recordTimeout(elapsed, classifier)
+          case Abnormal(e) => recordAbnormal(elapsed, classifier, customLabelValues, e)
+          case Error(e) => recordError(elapsed, classifier, customLabelValues, e)
+          case Canceled => recordCanceled(elapsed, classifier, customLabelValues)
+          case Timeout => recordTimeout(elapsed, classifier, customLabelValues)
         }
 
-      private def recordCanceled(elapsed: Long, classifier: Option[String]): F[Unit] =
+      private def recordCanceled(
+          elapsed: Long,
+          classifier: Option[String],
+          customLabelValues: List[String],
+      ): F[Unit] =
         exemplarLabels.flatMap { exemplarOpt =>
           Sync[F].delay {
             metrics.abnormalTerminations
@@ -227,6 +267,7 @@ final class Prometheus[F[_]: Sync] private (
       private def recordAbnormal(
           elapsed: Long,
           classifier: Option[String],
+          customLabelValues: List[String],
           cause: Throwable,
       ): F[Unit] =
         exemplarLabels.flatMap { exemplarOpt =>
@@ -248,6 +289,7 @@ final class Prometheus[F[_]: Sync] private (
       private def recordError(
           elapsed: Long,
           classifier: Option[String],
+          customLabelValues: List[String],
           cause: Throwable,
       ): F[Unit] =
         exemplarLabels.flatMap { exemplarOpt =>
@@ -266,7 +308,11 @@ final class Prometheus[F[_]: Sync] private (
           }
         }
 
-      private def recordTimeout(elapsed: Long, classifier: Option[String]): F[Unit] =
+      private def recordTimeout(
+          elapsed: Long,
+          classifier: Option[String],
+          customLabelValues: List[String],
+      ): F[Unit] =
         exemplarLabels.flatMap { exemplarOpt =>
           Sync[F].delay {
             metrics.abnormalTerminations
