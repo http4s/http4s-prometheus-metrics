@@ -24,7 +24,9 @@ import io.prometheus.client.CollectorRegistry
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Response
-import org.http4s.dsl.io._
+import org.http4s.dsl.io.*
+import org.http4s.metrics.{CustomLabels, EmptyCustomLabels}
+import org.http4s.util.{SizedSeq, SizedSeq3}
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -32,11 +34,17 @@ import java.util.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 object util {
-  val custLblVals: List[(String, String)] = List(
-    "provider" -> "Comcast",
-    "customLabel2" -> "test-custom-label12",
-    "customLabel3" -> "test-custom-label13",
-  )
+  val providerLabels = SizedSeq3("provider", "customLabel2", "customLabel3")
+  val providerLabelValues = SizedSeq3("", "", "")
+  val providerCustomLabels = new CustomLabels[SizedSeq3[String]] {
+    override def labels: SizedSeq3[String] = providerLabels
+    override def values: SizedSeq3[String] = providerLabelValues
+  }
+  val paypalLabelValues = SizedSeq3("Paypal", "test-custom-label12", "test-custom-label13")
+  val paypalProviderLabels = new CustomLabels[SizedSeq3[String]] {
+    override def labels: SizedSeq3[String] = providerLabels
+    override def values: SizedSeq3[String] = paypalLabelValues
+  }
 
   def stub: PartialFunction[Request[IO], IO[Response[IO]]] = {
     case (GET | POST | PUT | DELETE) -> Root / "ok" =>
@@ -74,7 +82,7 @@ object util {
       method,
       classifier,
       cause,
-    )(Seq.empty)
+    )(EmptyCustomLabels())
 
   def cntWithCustLbl(
       registry: CollectorRegistry,
@@ -84,10 +92,10 @@ object util {
       classifier: String = "",
       cause: String = "",
   )(
-      customLabelAndValues: Seq[(String, String)]
+      pCustomLabels: CustomLabels[SizedSeq[String]]
   ): Double = {
-    val customLabels = customLabelAndValues.map(_._1)
-    val customValues: Seq[String] = customLabelAndValues.map(_._2)
+    val customLabels = pCustomLabels.labels.toSeq
+    val customValues = pCustomLabels.values.toSeq
     name match {
       case "active_requests" =>
         registry.getSampleValue(
@@ -99,8 +107,8 @@ object util {
         registry
           .getSampleValue(
             s"${prefix}_request_count_total",
-            Array("classifier", "method", "status") ++ customLabels,
-            Array(classifier, method, "2xx") ++ customValues,
+            Array("classifier", "method", "status") ++ customLabels.toSeq,
+            Array(classifier, method, "2xx") ++ customValues.toSeq,
           )
       case "2xx_headers_duration" =>
         registry.getSampleValue(
