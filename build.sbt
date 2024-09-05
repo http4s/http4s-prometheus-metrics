@@ -10,7 +10,7 @@ ThisBuild / startYear := Some(2018)
 
 lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins(NoPublishPlugin)
 
-val http4sVersion = "0.23.27"
+val http4sVersion: String = "0.23.27-121-b8811f9-SNAPSHOT"
 val prometheusVersion = "0.16.0"
 val munitVersion = "1.0.0"
 val munitCatsEffectVersion = "2.0.0"
