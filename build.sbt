@@ -3,7 +3,9 @@ ThisBuild / developers := List(
   tlGitHubDev("rossabaker", "Ross A. Baker")
 )
 
-ThisBuild / resolvers += "Snapshot Repo" at "https://s01.oss.sonatype.org/content/repositories/snapshots"
+ThisBuild / resolvers += "Snapshot Repo".at(
+  "https://s01.oss.sonatype.org/content/repositories/snapshots"
+)
 
 val Scala213 = "2.13.14"
 ThisBuild / crossScalaVersions := Seq("2.12.19", Scala213, "3.3.3")
