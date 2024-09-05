@@ -25,7 +25,13 @@ import io.prometheus.client.*
 import io.prometheus.client.CollectorRegistry
 import org.http4s.Method
 import org.http4s.Status
-import org.http4s.metrics.{CustomLabels, CustomMetricsOps, EmptyCustomLabels, MetricsOps, TerminationType}
+import org.http4s.metrics.{
+  CustomLabels,
+  CustomMetricsOps,
+  EmptyCustomLabels,
+  MetricsOps,
+  TerminationType,
+}
 import org.http4s.metrics.TerminationType.Abnormal
 import org.http4s.metrics.TerminationType.Canceled
 import org.http4s.metrics.TerminationType.Error

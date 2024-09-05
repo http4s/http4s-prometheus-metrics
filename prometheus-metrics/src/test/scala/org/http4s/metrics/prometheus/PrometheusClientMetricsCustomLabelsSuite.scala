@@ -43,8 +43,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/ok").attempt.map { resp =>
       assertEquals(cntWithCustLbl(registry, "2xx_responses", "client")(paypalProviderLabels), 1.0)
       assertEquals(cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "client")(paypalProviderLabels), 0.05)
-      assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "client")(paypalProviderLabels), 0.1)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client")(paypalProviderLabels),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client")(paypalProviderLabels),
+        0.1,
+      )
       assertEquals(resp, Right("200 OK"))
     }
   }
@@ -55,8 +61,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/bad-request").attempt.map { resp =>
       assertEquals(cntWithCustLbl(registry, "4xx_responses", "client")(paypalProviderLabels), 1.0)
       assertEquals(cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "4xx_headers_duration", "client")(paypalProviderLabels), 0.05)
-      assertEquals(cntWithCustLbl(registry, "4xx_total_duration", "client")(paypalProviderLabels), 0.1)
+      assertEquals(
+        cntWithCustLbl(registry, "4xx_headers_duration", "client")(paypalProviderLabels),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "4xx_total_duration", "client")(paypalProviderLabels),
+        0.1,
+      )
       resp match {
         case Left(UnexpectedStatus(status, _, _)) => assertEquals(status, Status.BadRequest)
         case other => fail(s"Unexpected response status: $other")
@@ -70,8 +82,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/internal-server-error").attempt.map { resp =>
       assertEquals(cntWithCustLbl(registry, "5xx_responses", "client")(paypalProviderLabels), 1.0)
       assertEquals(cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "5xx_headers_duration", "client")(paypalProviderLabels), 0.05)
-      assertEquals(cntWithCustLbl(registry, "5xx_total_duration", "client")(paypalProviderLabels), 0.1)
+      assertEquals(
+        cntWithCustLbl(registry, "5xx_headers_duration", "client")(paypalProviderLabels),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "5xx_total_duration", "client")(paypalProviderLabels),
+        0.1,
+      )
       resp match {
         case Left(UnexpectedStatus(status, _, _)) =>
           assertEquals(status, Status.InternalServerError)
@@ -85,8 +103,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
   ) { case (registry, client) =>
     client.expect[String]("/ok").attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
-      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "get")(paypalProviderLabels), 1.0)
-      assertEquals(cntWithCustLbl(registry, "active_requests", "client", "get")(paypalProviderLabels), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_responses", "client", "get")(paypalProviderLabels),
+        1.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "active_requests", "client", "get")(paypalProviderLabels),
+        0.0,
+      )
       assertEquals(
         cntWithCustLbl(registry, "2xx_headers_duration", "client", "get")(paypalProviderLabels),
         0.05,
@@ -103,8 +127,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
   ) { case (registry, client) =>
     client.expect[String](Request[IO](POST, uri"/ok")).attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
-      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "post")(paypalProviderLabels), 1.0)
-      assertEquals(cntWithCustLbl(registry, "active_requests", "client", "post")(paypalProviderLabels), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_responses", "client", "post")(paypalProviderLabels),
+        1.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "active_requests", "client", "post")(paypalProviderLabels),
+        0.0,
+      )
       assertEquals(
         cntWithCustLbl(registry, "2xx_headers_duration", "client", "post")(paypalProviderLabels),
         0.05,
@@ -122,8 +152,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String](Request[IO](PUT, uri"/ok")).attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
 
-      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "put")(paypalProviderLabels), 1.0)
-      assertEquals(cntWithCustLbl(registry, "active_requests", "client", "put")(paypalProviderLabels), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_responses", "client", "put")(paypalProviderLabels),
+        1.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "active_requests", "client", "put")(paypalProviderLabels),
+        0.0,
+      )
       assertEquals(
         cntWithCustLbl(registry, "2xx_headers_duration", "client", "put")(paypalProviderLabels),
         0.05,
@@ -141,7 +177,10 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String](Request[IO](DELETE, uri"/ok")).attempt.map { resp =>
       assertEquals(resp, Right("200 OK"))
 
-      assertEquals(cntWithCustLbl(registry, "2xx_responses", "client", "delete")(paypalProviderLabels), 1.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_responses", "client", "delete")(paypalProviderLabels),
+        1.0,
+      )
       assertEquals(
         cntWithCustLbl(registry, "active_requests", "client", "delete")(paypalProviderLabels),
         0.0,
@@ -163,10 +202,15 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/error").attempt.map {
       case Left(_: IOException) =>
         assertEquals(
-          cntWithCustLbl(registry, "errors", "client", cause = "java.io.IOException")(paypalProviderLabels),
+          cntWithCustLbl(registry, "errors", "client", cause = "java.io.IOException")(
+            paypalProviderLabels
+          ),
           1.0,
         )
-        assertEquals(cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels),
+          0.0,
+        )
       case other => fail(s"Expected an IOException, got: $other")
     }
   }
@@ -177,7 +221,10 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/timeout").attempt.map {
       case Left(_: TimeoutException) =>
         assertEquals(cntWithCustLbl(registry, "timeouts", "client")(paypalProviderLabels), 1.0)
-        assertEquals(cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels),
+          0.0,
+        )
       case other => fail(s"Expected a TimeoutException, got: $other")
     }
   }
@@ -189,11 +236,15 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
       assertEquals(resp, Right("200 OK"))
 
       assertEquals(
-        cntWithCustLbl(registry, "2xx_responses", "client", "get", "classifier")(paypalProviderLabels),
+        cntWithCustLbl(registry, "2xx_responses", "client", "get", "classifier")(
+          paypalProviderLabels
+        ),
         1.0,
       )
       assertEquals(
-        cntWithCustLbl(registry, "active_requests", "client", "get", "classifier")(paypalProviderLabels),
+        cntWithCustLbl(registry, "active_requests", "client", "get", "classifier")(
+          paypalProviderLabels
+        ),
         0.0,
       )
       assertEquals(
@@ -203,7 +254,9 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
         0.05,
       )
       assertEquals(
-        cntWithCustLbl(registry, "2xx_total_duration", "client", "get", "classifier")(paypalProviderLabels),
+        cntWithCustLbl(registry, "2xx_total_duration", "client", "get", "classifier")(
+          paypalProviderLabels
+        ),
         0.1,
       )
     }
@@ -214,8 +267,14 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
     client.expect[String]("/ok").as(cr).map { registry =>
       assertEquals(cntWithCustLbl(registry, "2xx_responses", "client")(paypalProviderLabels), 0.0)
       assertEquals(cntWithCustLbl(registry, "active_requests", "client")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "client")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "client")(paypalProviderLabels), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "client")(paypalProviderLabels),
+        0.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "client")(paypalProviderLabels),
+        0.0,
+      )
     }
   }
 

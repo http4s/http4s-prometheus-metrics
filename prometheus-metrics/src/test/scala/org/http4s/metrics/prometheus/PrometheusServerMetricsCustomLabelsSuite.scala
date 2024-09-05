@@ -45,12 +45,18 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
         assertEquals(b, "200 OK")
         assertEquals(r.status, Status.Ok)
         assertEquals(cntWithCustLbl(registry, "2xx_responses", "server")(paypalProviderLabels), 1.0)
-        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels),
+          0.0,
+        )
         assertEquals(
           cntWithCustLbl(registry, "2xx_headers_duration", "server")(paypalProviderLabels),
           0.05,
         )
-        assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "server")(paypalProviderLabels), 0.1)
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_total_duration", "server")(paypalProviderLabels),
+          0.1,
+        )
       }
     }
   }
@@ -66,12 +72,18 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
         assertEquals(b, "400 Bad Request")
 
         assertEquals(cntWithCustLbl(registry, "4xx_responses", "server")(paypalProviderLabels), 1.0)
-        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels),
+          0.0,
+        )
         assertEquals(
           cntWithCustLbl(registry, "4xx_headers_duration", "server")(paypalProviderLabels),
           0.05,
         )
-        assertEquals(cntWithCustLbl(registry, "4xx_total_duration", "server")(paypalProviderLabels), 0.1)
+        assertEquals(
+          cntWithCustLbl(registry, "4xx_total_duration", "server")(paypalProviderLabels),
+          0.1,
+        )
       }
     }
   }
@@ -87,12 +99,18 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
         assertEquals(b, "500 Internal Server Error")
 
         assertEquals(cntWithCustLbl(registry, "5xx_responses", "server")(paypalProviderLabels), 1.0)
-        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels),
+          0.0,
+        )
         assertEquals(
           cntWithCustLbl(registry, "5xx_headers_duration", "server")(paypalProviderLabels),
           0.05,
         )
-        assertEquals(cntWithCustLbl(registry, "5xx_total_duration", "server")(paypalProviderLabels), 0.1)
+        assertEquals(
+          cntWithCustLbl(registry, "5xx_total_duration", "server")(paypalProviderLabels),
+          0.1,
+        )
       }
     }
   }
@@ -206,7 +224,9 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
           0.0,
         )
         assertEquals(
-          cntWithCustLbl(registry, "2xx_headers_duration", "server", "delete")(paypalProviderLabels),
+          cntWithCustLbl(registry, "2xx_headers_duration", "server", "delete")(
+            paypalProviderLabels
+          ),
           0.05,
         )
         assertEquals(
@@ -226,12 +246,20 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
       assert(r.isLeft)
 
       assertEquals(
-        cntWithCustLbl(registry, "errors", "server", cause = "java.io.IOException")(paypalProviderLabels),
+        cntWithCustLbl(registry, "errors", "server", cause = "java.io.IOException")(
+          paypalProviderLabels
+        ),
         1.0,
       )
       assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "5xx_headers_duration", "server")(paypalProviderLabels), 0.05)
-      assertEquals(cntWithCustLbl(registry, "5xx_total_duration", "server")(paypalProviderLabels), 0.05)
+      assertEquals(
+        cntWithCustLbl(registry, "5xx_headers_duration", "server")(paypalProviderLabels),
+        0.05,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "5xx_total_duration", "server")(paypalProviderLabels),
+        0.05,
+      )
     }
   }
 
@@ -254,12 +282,18 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
           )(paypalProviderLabels),
           1.0,
         )
-        assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
+        assertEquals(
+          cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels),
+          0.0,
+        )
         assertEquals(
           cntWithCustLbl(registry, "2xx_headers_duration", "server")(paypalProviderLabels),
           0.05,
         )
-        assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "server")(paypalProviderLabels), 0.1)
+        assertEquals(
+          cntWithCustLbl(registry, "2xx_total_duration", "server")(paypalProviderLabels),
+          0.1,
+        )
       }
     }
   }
@@ -310,8 +344,14 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
     routes.run(req).as(cr).map { registry =>
       assertEquals(cntWithCustLbl(registry, "2xx_responses", "server")(paypalProviderLabels), 0.0)
       assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "2xx_headers_duration", "server")(paypalProviderLabels), 0.0)
-      assertEquals(cntWithCustLbl(registry, "2xx_total_duration", "server")(paypalProviderLabels), 0.0)
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_headers_duration", "server")(paypalProviderLabels),
+        0.0,
+      )
+      assertEquals(
+        cntWithCustLbl(registry, "2xx_total_duration", "server")(paypalProviderLabels),
+        0.0,
+      )
     }
   }
 
