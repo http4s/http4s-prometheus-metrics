@@ -3,10 +3,6 @@ ThisBuild / developers := List(
   tlGitHubDev("rossabaker", "Ross A. Baker")
 )
 
-ThisBuild / resolvers += "s01-oss-sonatype-org-snapshots".at(
-  "https://s01.oss.sonatype.org/content/repositories/snapshots"
-)
-
 val Scala213 = "2.13.14"
 ThisBuild / crossScalaVersions := Seq("2.12.19", Scala213, "3.3.3")
 ThisBuild / scalaVersion := Scala213
@@ -14,7 +10,7 @@ ThisBuild / startYear := Some(2018)
 
 lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins(NoPublishPlugin)
 
-val http4sVersion = "0.23.27-125-895f328-SNAPSHOT"
+val http4sVersion = "0.23.28"
 val prometheusVersion = "0.16.0"
 val munitVersion = "1.0.0"
 val munitCatsEffectVersion = "2.0.0"
