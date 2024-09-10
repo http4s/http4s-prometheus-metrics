@@ -42,7 +42,8 @@ object util {
     override def labels: SizedSeq3[String] = providerLabels
     override def values: SizedSeq3[String] = providerLabelValues
   }
-  val paypalLabelValues: SizedSeq3[String] = SizedSeq3("Paypal", "test-custom-label12", "test-custom-label13")
+  val paypalLabelValues: SizedSeq3[String] =
+    SizedSeq3("Paypal", "test-custom-label12", "test-custom-label13")
   val paypalProviderLabels: CustomLabels[SizedSeq3[String]] = new CustomLabels[SizedSeq3[String]] {
     override def labels: SizedSeq3[String] = providerLabels
     override def values: SizedSeq3[String] = paypalLabelValues
