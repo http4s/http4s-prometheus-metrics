@@ -24,9 +24,11 @@ import io.prometheus.client.CollectorRegistry
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Response
-import org.http4s.dsl.io.*
-import org.http4s.metrics.{CustomLabels, EmptyCustomLabels}
-import org.http4s.util.{SizedSeq, SizedSeq3}
+import org.http4s.dsl.io._
+import org.http4s.metrics.CustomLabels
+import org.http4s.metrics.EmptyCustomLabels
+import org.http4s.util.SizedSeq
+import org.http4s.util.SizedSeq3
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -34,14 +36,14 @@ import java.util.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 
 object util {
-  val providerLabels = SizedSeq3("provider", "customLabel2", "customLabel3")
-  val providerLabelValues = SizedSeq3("", "", "")
-  val providerCustomLabels = new CustomLabels[SizedSeq3[String]] {
+  val providerLabels: SizedSeq3[String] = SizedSeq3("provider", "customLabel2", "customLabel3")
+  val providerLabelValues: SizedSeq3[String] = SizedSeq3("", "", "")
+  val providerCustomLabels: CustomLabels[SizedSeq3[String]] = new CustomLabels[SizedSeq3[String]] {
     override def labels: SizedSeq3[String] = providerLabels
     override def values: SizedSeq3[String] = providerLabelValues
   }
-  val paypalLabelValues = SizedSeq3("Paypal", "test-custom-label12", "test-custom-label13")
-  val paypalProviderLabels = new CustomLabels[SizedSeq3[String]] {
+  val paypalLabelValues: SizedSeq3[String] = SizedSeq3("Paypal", "test-custom-label12", "test-custom-label13")
+  val paypalProviderLabels: CustomLabels[SizedSeq3[String]] = new CustomLabels[SizedSeq3[String]] {
     override def labels: SizedSeq3[String] = providerLabels
     override def values: SizedSeq3[String] = paypalLabelValues
   }
