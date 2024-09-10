@@ -19,25 +19,23 @@ package org.http4s.metrics.prometheus
 import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
-import cats.syntax.all.*
-import org.http4s.util.SizedSeq
-import io.prometheus.client.*
+import cats.syntax.all._
 import io.prometheus.client.CollectorRegistry
+import io.prometheus.client._
 import org.http4s.Method
 import org.http4s.Status
-import org.http4s.metrics.{
-  CustomLabels,
-  CustomMetricsOps,
-  EmptyCustomLabels,
-  MetricsOps,
-  TerminationType,
-}
+import org.http4s.metrics.CustomLabels
+import org.http4s.metrics.CustomMetricsOps
+import org.http4s.metrics.EmptyCustomLabels
+import org.http4s.metrics.MetricsOps
+import org.http4s.metrics.TerminationType
 import org.http4s.metrics.TerminationType.Abnormal
 import org.http4s.metrics.TerminationType.Canceled
 import org.http4s.metrics.TerminationType.Error
 import org.http4s.metrics.TerminationType.Timeout
 import org.http4s.metrics.prometheus.Prometheus.registerCollector
 import org.http4s.metrics.prometheus.Prometheus.toFlatArray
+import org.http4s.util.SizedSeq
 
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
   *
