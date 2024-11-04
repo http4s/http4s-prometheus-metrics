@@ -20,7 +20,6 @@ import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.all._
-import io.prometheus.client.CollectorRegistry
 import io.prometheus.client._
 import org.http4s.Method
 import org.http4s.Status
