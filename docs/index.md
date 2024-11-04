@@ -30,6 +30,9 @@ val meteredRouter: Resource[IO, HttpRoutes[IO]] =
   } yield router
 ```
 
+### Example Project
+Refer to [this example project](https://github.com/martinprobson/http4s_prometheus_example) that publishes the default server metrics and exposes them on a sample Grafana dashboard. 
+
 ## Client example
 
 ```scala mdoc:reset:silent
@@ -49,3 +52,8 @@ val prefixedClient: Resource[IO, Client[IO]] =
     metrics <- Prometheus.metricsOps[IO](registry, "prefix")
   } yield Metrics[IO](metrics, classifier)(httpClient)
 ```
+
+## Exemplars
+
+You can add Prometheus exemplars to most of the metrics (except gauges) recorded by `http4s-prometheus-metrics`
+by using `Prometheus.metricsOpsWithExemplars` and passing an effect that captures the related exemplar labels.

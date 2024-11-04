@@ -166,7 +166,7 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
     val req = Request[IO](method = GET, uri = uri"/error")
 
     routes.run(req).attempt.map { r =>
-      val Left(_) = r
+      assert(r.isLeft)
 
       assertEquals(count(registry, "errors", "server", cause = "java.io.IOException"), 1.0)
       assertEquals(count(registry, "active_requests", "server"), 0.0)
@@ -183,7 +183,7 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
     routes.run(req).flatMap { r =>
       r.body.attempt.compile.lastOrError.map { b =>
         assertEquals(r.status, Status.Ok)
-        val Left(_) = b
+        assert(b.isLeft)
 
         assertEquals(
           count(registry, "abnormal_terminations", "server", cause = "java.lang.RuntimeException"),
@@ -240,5 +240,5 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
   def meteredRoutes(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
   ): SyncIO[FunFixture[(CollectorRegistry, HttpApp[IO])]] =
-    ResourceFixture(buildMeteredRoutes(classifier))
+    ResourceFunFixture(buildMeteredRoutes(classifier))
 }
