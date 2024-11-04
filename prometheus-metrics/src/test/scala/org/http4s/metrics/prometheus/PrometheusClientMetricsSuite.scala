@@ -55,8 +55,10 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
       assertEquals(count(registry, "active_requests", "client"), 0.0)
       assertEquals(count(registry, "4xx_headers_duration", "client"), 0.05)
       assertEquals(count(registry, "4xx_total_duration", "client"), 0.1)
-      val Left(UnexpectedStatus(status, _, _)) = resp
-      assertEquals(status, Status.BadRequest)
+      resp match {
+        case Left(UnexpectedStatus(status, _, _)) => assertEquals(status, Status.BadRequest)
+        case other => fail(s"Unexpected response status: $other")
+      }
     }
   }
 
@@ -68,8 +70,11 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
       assertEquals(count(registry, "active_requests", "client"), 0.0)
       assertEquals(count(registry, "5xx_headers_duration", "client"), 0.05)
       assertEquals(count(registry, "5xx_total_duration", "client"), 0.1)
-      val Left(UnexpectedStatus(status, _, _)) = resp
-      assertEquals(status, Status.InternalServerError)
+      resp match {
+        case Left(UnexpectedStatus(status, _, _)) =>
+          assertEquals(status, Status.InternalServerError)
+        case other => fail(s"Unexpected response status: $other")
+      }
     }
   }
 
@@ -126,22 +131,22 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   meteredClient().test(
     "A http client with a prometheus metrics middleware should register an error"
   ) { case (registry, client) =>
-    client.expect[String]("/error").attempt.map { resp =>
-      val Left(_: IOException) = resp
-
-      assertEquals(count(registry, "errors", "client", cause = "java.io.IOException"), 1.0)
-      assertEquals(count(registry, "active_requests", "client"), 0.0)
+    client.expect[String]("/error").attempt.map {
+      case Left(_: IOException) =>
+        assertEquals(count(registry, "errors", "client", cause = "java.io.IOException"), 1.0)
+        assertEquals(count(registry, "active_requests", "client"), 0.0)
+      case other => fail(s"Expected an IOException, got: $other")
     }
   }
 
   meteredClient().test(
     "A http client with a prometheus metrics middleware should register a timeout"
   ) { case (registry, client) =>
-    client.expect[String]("/timeout").attempt.map { resp =>
-      val Left(_: TimeoutException) = resp
-
-      assertEquals(count(registry, "timeouts", "client"), 1.0)
-      assertEquals(count(registry, "active_requests", "client"), 0.0)
+    client.expect[String]("/timeout").attempt.map {
+      case Left(_: TimeoutException) =>
+        assertEquals(count(registry, "timeouts", "client"), 1.0)
+        assertEquals(count(registry, "active_requests", "client"), 0.0)
+      case other => fail(s"Expected a TimeoutException, got: $other")
     }
   }
 
@@ -182,5 +187,5 @@ class PrometheusClientMetricsSuite extends CatsEffectSuite {
   def meteredClient(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
   ): SyncIO[FunFixture[(CollectorRegistry, Client[IO])]] =
-    ResourceFixture(buildMeteredClient(classifier))
+    ResourceFunFixture(buildMeteredClient(classifier))
 }
