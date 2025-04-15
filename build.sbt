@@ -23,6 +23,7 @@ lazy val prometheusMetrics = project
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-core" % http4sVersion,
       "io.prometheus" % "prometheus-metrics-core" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % prometheusVersion,
       "io.prometheus" % "prometheus-metrics-instrumentation-jvm" % prometheusVersion,
       "org.scalameta" %%% "munit-scalacheck" % munitVersion % Test,
       "org.typelevel" %%% "munit-cats-effect" % munitCatsEffectVersion % Test,
