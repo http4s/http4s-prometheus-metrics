@@ -11,7 +11,7 @@ ThisBuild / startYear := Some(2018)
 lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins(NoPublishPlugin)
 
 val http4sVersion = "0.23.38"
-val prometheusVersion = "0.16.0"
+val prometheusVersion = "1.3.6"
 val munitVersion = "1.3.1"
 val munitCatsEffectVersion = "2.2.1"
 
@@ -22,9 +22,9 @@ lazy val prometheusMetrics = project
     description := "Support for Prometheus Metrics",
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-core" % http4sVersion,
-      "io.prometheus" % "simpleclient" % prometheusVersion,
-      "io.prometheus" % "simpleclient_common" % prometheusVersion,
-      "io.prometheus" % "simpleclient_hotspot" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-core" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-exposition-formats" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-instrumentation-jvm" % prometheusVersion,
       "org.scalameta" %%% "munit-scalacheck" % munitVersion % Test,
       "org.typelevel" %%% "munit-cats-effect" % munitCatsEffectVersion % Test,
       "org.http4s" %%% "http4s-server" % http4sVersion % Test,

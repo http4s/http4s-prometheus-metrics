@@ -16,14 +16,15 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect._
-import io.prometheus.client.CollectorRegistry
-import io.prometheus.client.exemplars.Exemplar
+import cats.effect.*
+import io.prometheus.metrics.model.registry.PrometheusRegistry
+import io.prometheus.metrics.model.snapshots.CounterSnapshot.CounterDataPointSnapshot
+import io.prometheus.metrics.model.snapshots.Exemplar
 import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.client.Client
 import org.http4s.client.middleware.Metrics
-import org.http4s.metrics.prometheus.util._
+import org.http4s.metrics.prometheus.util.*
 
 class PrometheusExemplarsSuite extends CatsEffectSuite {
   val client: Client[IO] = Client.fromHttpApp[IO](HttpApp[IO](stub))
@@ -35,25 +36,24 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
       val filter = new java.util.HashSet[String]()
       filter.add("exemplars_request_count_total")
       val exemplar: Exemplar = registry
-        .filteredMetricFamilySamples(filter)
-        .nextElement()
-        .samples
+        .scrape((_: String) == "exemplars_request_count")
         .get(0)
-        .exemplar
+        .getDataPoints
+        .get(0) match { case c: CounterDataPointSnapshot => c.getExemplar }
 
-      assertEquals(exemplar.getLabelName(0), "trace_id")
-      assertEquals(exemplar.getLabelValue(0), "123")
+      assertEquals(exemplar.getLabels.getName(0), "trace_id")
+      assertEquals(exemplar.getLabels.getValue(0), "123")
       assertEquals(resp, "200 OK")
     }
   }
 
   private def buildMeteredClient(
       exemplar: Map[String, String]
-  ): Resource[IO, (CollectorRegistry, Client[IO])] = {
+  ): Resource[IO, (PrometheusRegistry, Client[IO])] = {
     implicit val clock: Clock[IO] = FakeClock[IO]
 
     for {
-      registry <- Prometheus.collectorRegistry[IO]
+      registry <- Prometheus.prometheusRegistry[IO]
       metrics <- Prometheus
         .metricsOpsWithExemplars[IO](registry, IO.pure(Some(exemplar)), "exemplars")
     } yield (registry, Metrics[IO](metrics)(client))
@@ -61,6 +61,6 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
 
   def meteredClient(
       exemplar: Map[String, String]
-  ): SyncIO[FunFixture[(CollectorRegistry, Client[IO])]] =
+  ): SyncIO[FunFixture[(PrometheusRegistry, Client[IO])]] =
     ResourceFunFixture(buildMeteredClient(exemplar))
 }

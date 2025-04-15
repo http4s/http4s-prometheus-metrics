@@ -16,107 +16,124 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect._
-import cats.syntax.all._
-import io.prometheus.client.CollectorRegistry
-import io.prometheus.client.exporter.common.TextFormat
-import io.prometheus.client.hotspot._
+import cats.effect.*
+import cats.syntax.all.*
+import io.prometheus.metrics.config.PrometheusProperties
+import io.prometheus.metrics.expositionformats.{
+  ExpositionFormatWriter,
+  OpenMetricsTextFormatWriter,
+  PrometheusTextFormatWriter,
+}
+import io.prometheus.metrics.instrumentation.jvm.*
+import io.prometheus.metrics.model.registry.PrometheusRegistry
+
+import java.io.ByteArrayOutputStream
+import java.nio.charset.StandardCharsets
 import org.http4s.Uri.Path
-import org.http4s._
-import org.http4s.syntax.all._
-import org.typelevel.ci._
+import org.http4s.*
+import org.http4s.syntax.all.*
+import org.typelevel.ci.*
 
 /*
  * PrometheusExportService Contains an HttpService
  * ready to be scraped by Prometheus, paired
- * with the CollectorRegistry that it is creating
+ * with the PrometheusRegistry that it is creating
  * metrics for, allowing custom metric registration.
  */
 final class PrometheusExportService[F[_]] private (
     val routes: HttpRoutes[F],
-    val collectorRegistry: CollectorRegistry,
+    val prometheusRegistry: PrometheusRegistry,
 )
 
 object PrometheusExportService {
+  private val openMetricsTextFormatWriter = new OpenMetricsTextFormatWriter(false, false)
+  private val prometheusTextFormatWriter = new PrometheusTextFormatWriter(false)
 
   private val metricsPath: Path = path"/metrics"
 
-  def apply[F[_]: Sync](collectorRegistry: CollectorRegistry): PrometheusExportService[F] =
-    new PrometheusExportService(service(collectorRegistry), collectorRegistry)
+  def apply[F[_]: Sync](prometheusRegistry: PrometheusRegistry): PrometheusExportService[F] =
+    new PrometheusExportService(service(prometheusRegistry), prometheusRegistry)
 
-  def format004[F[_]: Sync](collectorRegistry: CollectorRegistry): PrometheusExportService[F] =
-    new PrometheusExportService(service004(collectorRegistry), collectorRegistry)
+  def format004[F[_]: Sync](prometheusRegistry: PrometheusRegistry): PrometheusExportService[F] =
+    new PrometheusExportService(service004(prometheusRegistry), prometheusRegistry)
 
   def formatOpenmetrics100[F[_]: Sync](
-      collectorRegistry: CollectorRegistry
+      prometheusRegistry: PrometheusRegistry
   ): PrometheusExportService[F] =
-    new PrometheusExportService(serviceOpenmetrics100(collectorRegistry), collectorRegistry)
+    new PrometheusExportService(serviceOpenmetrics100(prometheusRegistry), prometheusRegistry)
 
   def build[F[_]: Sync]: Resource[F, PrometheusExportService[F]] =
     for {
-      cr <- Prometheus.collectorRegistry[F]
-      _ <- addDefaults(cr)
+      cr <- Prometheus.prometheusRegistry[F]
+      _ <- Resource.eval(addDefaults(cr))
     } yield new PrometheusExportService[F](service(cr), cr)
 
   def generateResponse[F[_]: Sync](
-      collectorRegistry: CollectorRegistry
-  ): F[Response[F]] = generateResponse(None, collectorRegistry)
+      prometheusRegistry: PrometheusRegistry
+  ): F[Response[F]] = generateResponse(None, prometheusRegistry)
 
   def generateResponse[F[_]: Sync](
       acceptHeader: Option[String],
-      collectorRegistry: CollectorRegistry,
+      prometheusRegistry: PrometheusRegistry,
   ): F[Response[F]] =
     generateResponse(
-      acceptHeader.fold(TextFormat.CONTENT_TYPE_004)(TextFormat.chooseContentType),
-      collectorRegistry,
+      chooseContentType(acceptHeader),
+      prometheusRegistry,
     )
+
+  private def chooseContentType(acceptsHeader: Option[String]) =
+
+    if (acceptsHeader.exists(openMetricsTextFormatWriter.accepts)) {
+      OpenMetricsTextFormatWriter.CONTENT_TYPE
+    } else {
+      PrometheusTextFormatWriter.CONTENT_TYPE
+    }
+
+  private def getWriter(contentType: String): ExpositionFormatWriter = contentType match {
+    case OpenMetricsTextFormatWriter.CONTENT_TYPE => openMetricsTextFormatWriter
+    case PrometheusTextFormatWriter.CONTENT_TYPE => prometheusTextFormatWriter
+    case _ => prometheusTextFormatWriter
+  }
 
   def generateResponse[F[_]: Sync](
       contentType: String,
-      collectorRegistry: CollectorRegistry,
+      prometheusRegistry: PrometheusRegistry,
   ): F[Response[F]] = for {
-    parsedContentType <- Sync[F].delay(TextFormat.chooseContentType(contentType))
-    text <- Sync[F]
-      .blocking {
-        val writer = new NonSafepointingStringWriter()
-        TextFormat.writeFormat(
-          parsedContentType,
-          writer,
-          collectorRegistry.metricFamilySamples,
-        )
-        writer.toString
+    writer <- Sync[F].delay(getWriter(contentType))
+    text <-
+      Resource.fromAutoCloseable(Sync[F].delay(new ByteArrayOutputStream())).use { os =>
+        Sync[F]
+          .blocking {
+            writer.write(os, prometheusRegistry.scrape())
+            os.flush()
+            os.toString(StandardCharsets.UTF_8.name())
+          }
+
       }
   } yield Response[F](Status.Ok)
     .withEntity(text)
-    .withHeaders(Header.Raw(ci"Content-Type", parsedContentType))
+    .withHeaders(Header.Raw(ci"Content-Type", writer.getContentType))
 
-  def service[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
+  def service[F[_]: Sync](prometheusRegistry: PrometheusRegistry): HttpRoutes[F] =
     HttpRoutes.of[F] {
       case req if req.method == Method.GET && req.pathInfo == metricsPath =>
-        generateResponse(req.headers.get(ci"accept").map(_.head.value), collectorRegistry)
+        generateResponse(req.headers.get(ci"accept").map(_.head.value), prometheusRegistry)
     }
 
-  def service004[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
+  def service004[F[_]: Sync](prometheusRegistry: PrometheusRegistry): HttpRoutes[F] =
     HttpRoutes.of[F] {
       case req if req.method == Method.GET && req.pathInfo == metricsPath =>
-        generateResponse(TextFormat.CONTENT_TYPE_004, collectorRegistry)
+        generateResponse(PrometheusTextFormatWriter.CONTENT_TYPE, prometheusRegistry)
     }
 
-  def serviceOpenmetrics100[F[_]: Sync](collectorRegistry: CollectorRegistry): HttpRoutes[F] =
+  def serviceOpenmetrics100[F[_]: Sync](prometheusRegistry: PrometheusRegistry): HttpRoutes[F] =
     HttpRoutes.of[F] {
       case req if req.method == Method.GET && req.pathInfo == metricsPath =>
-        generateResponse(TextFormat.CONTENT_TYPE_OPENMETRICS_100, collectorRegistry)
+        generateResponse(OpenMetricsTextFormatWriter.CONTENT_TYPE, prometheusRegistry)
     }
 
-  def addDefaults[F[_]: Sync](cr: CollectorRegistry): Resource[F, Unit] =
-    for {
-      _ <- Prometheus.registerCollector(new StandardExports(), cr)
-      _ <- Prometheus.registerCollector(new MemoryPoolsExports(), cr)
-      _ <- Prometheus.registerCollector(new BufferPoolsExports(), cr)
-      _ <- Prometheus.registerCollector(new GarbageCollectorExports(), cr)
-      _ <- Prometheus.registerCollector(new ThreadExports(), cr)
-      _ <- Prometheus.registerCollector(new ClassLoadingExports(), cr)
-      _ <- Prometheus.registerCollector(new VersionInfoExports(), cr)
-      _ <- Prometheus.registerCollector(new MemoryAllocationExports(), cr)
-    } yield ()
+  private val config = PrometheusProperties.get()
+
+  def addDefaults[F[_]](cr: PrometheusRegistry)(implicit F: Sync[F]): F[Unit] =
+    F.delay(JvmMetrics.builder(config).register(cr))
 }

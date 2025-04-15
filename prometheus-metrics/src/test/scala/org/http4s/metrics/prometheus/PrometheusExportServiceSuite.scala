@@ -33,7 +33,7 @@ class PrometheusExportServiceSuite extends CatsEffectSuite {
           IO {
             val lines = resp.linesIterator.toList
             // Assortment of lines that should appear in the output as a sanity check
-            assert(clue(lines).contains("# TYPE jvm_memory_pool_allocated_bytes_total counter"))
+            assert(clue(lines).contains("# TYPE jvm_memory_pool_max_bytes gauge"))
             assert(clue(lines).contains("# HELP jvm_threads_daemon Daemon thread count of a JVM"))
             assert(clue(lines).contains("# HELP process_open_fds Number of open file descriptors."))
             assert(clue(lines).contains("# TYPE process_open_fds gauge"))
