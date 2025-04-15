@@ -16,7 +16,7 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect.*
+import cats.effect._
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import munit.CatsEffectSuite
 import org.http4s.HttpApp
@@ -24,10 +24,10 @@ import org.http4s.HttpRoutes
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Status
-import org.http4s.dsl.io.*
-import org.http4s.metrics.prometheus.util.*
+import org.http4s.dsl.io._
+import org.http4s.metrics.prometheus.util._
 import org.http4s.server.middleware.Metrics
-import org.http4s.syntax.all.*
+import org.http4s.syntax.all._
 
 class PrometheusServerMetricsSuite extends CatsEffectSuite {
 

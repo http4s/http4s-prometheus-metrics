@@ -16,23 +16,21 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect.*
-import cats.syntax.all.*
+import cats.effect._
+import cats.syntax.all._
 import io.prometheus.metrics.config.PrometheusProperties
-import io.prometheus.metrics.expositionformats.{
-  ExpositionFormatWriter,
-  OpenMetricsTextFormatWriter,
-  PrometheusTextFormatWriter,
-}
-import io.prometheus.metrics.instrumentation.jvm.*
+import io.prometheus.metrics.expositionformats.ExpositionFormatWriter
+import io.prometheus.metrics.expositionformats.OpenMetricsTextFormatWriter
+import io.prometheus.metrics.expositionformats.PrometheusTextFormatWriter
+import io.prometheus.metrics.instrumentation.jvm._
 import io.prometheus.metrics.model.registry.PrometheusRegistry
+import org.http4s.Uri.Path
+import org.http4s._
+import org.http4s.syntax.all._
+import org.typelevel.ci._
 
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
-import org.http4s.Uri.Path
-import org.http4s.*
-import org.http4s.syntax.all.*
-import org.typelevel.ci.*
 
 /*
  * PrometheusExportService Contains an HttpService

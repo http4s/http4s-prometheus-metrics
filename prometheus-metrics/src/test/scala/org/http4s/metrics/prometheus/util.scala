@@ -23,15 +23,13 @@ import fs2.Stream
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import io.prometheus.metrics.model.snapshots.CounterSnapshot.CounterDataPointSnapshot
 import io.prometheus.metrics.model.snapshots.GaugeSnapshot.GaugeDataPointSnapshot
+import io.prometheus.metrics.model.snapshots.HistogramSnapshot
 import io.prometheus.metrics.model.snapshots.HistogramSnapshot.HistogramDataPointSnapshot
-import io.prometheus.metrics.model.snapshots.{
-  HistogramSnapshot,
-  Labels,
-}
+import io.prometheus.metrics.model.snapshots.Labels
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Response
-import org.http4s.dsl.io.*
+import org.http4s.dsl.io._
 import org.http4s.metrics.CustomLabels
 import org.http4s.metrics.EmptyCustomLabels
 import org.http4s.util.SizedSeq

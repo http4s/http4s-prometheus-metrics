@@ -19,9 +19,10 @@ package org.http4s.metrics.prometheus
 import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
-import cats.syntax.all.*
-import io.prometheus.metrics.core.metrics.*
+import cats.syntax.all._
+import io.prometheus.metrics.core.metrics._
 import io.prometheus.metrics.model.registry.Collector
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import io.prometheus.metrics.model.snapshots.Labels
 import org.http4s.Method
 import org.http4s.Status
@@ -35,7 +36,6 @@ import org.http4s.metrics.TerminationType.Canceled
 import org.http4s.metrics.TerminationType.Error
 import org.http4s.metrics.TerminationType.Timeout
 import org.http4s.metrics.prometheus.Prometheus.registerCollector
-import io.prometheus.metrics.model.registry.PrometheusRegistry
 import org.http4s.util.SizedSeq
 
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
