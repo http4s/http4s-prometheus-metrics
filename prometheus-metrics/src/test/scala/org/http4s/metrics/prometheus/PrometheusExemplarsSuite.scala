@@ -39,7 +39,10 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
         .scrape((_: String) == "exemplars_request_count")
         .get(0)
         .getDataPoints
-        .get(0) match { case c: CounterDataPointSnapshot => c.getExemplar }
+        .get(0) match {
+        case c: CounterDataPointSnapshot => c.getExemplar
+        case o => fail(s"expected to find CounterDataPointSnapshot but found $o")
+      }
 
       assertEquals(exemplar.getLabels.getName(0), "trace_id")
       assertEquals(exemplar.getLabels.getValue(0), "123")
