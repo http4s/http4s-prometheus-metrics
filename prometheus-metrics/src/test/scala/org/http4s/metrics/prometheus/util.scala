@@ -260,7 +260,7 @@ object util {
         case Some(c: CounterDataPointSnapshot) => c.getValue.toLong
         case Some(h: HistogramDataPointSnapshot) => h.getCount
       }
-      .head
+      .head.toDouble
 
   private def readGaugeSnapshot(registry: PrometheusRegistry, name: String, labels: Labels) =
     registry
