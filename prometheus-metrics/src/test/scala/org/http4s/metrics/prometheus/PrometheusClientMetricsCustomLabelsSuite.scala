@@ -16,8 +16,8 @@
 
 package org.http4s.metrics.prometheus
 
-import cats.effect._
-import io.prometheus.client.CollectorRegistry
+import cats.effect.*
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.Request
@@ -25,10 +25,10 @@ import org.http4s.Status
 import org.http4s.client.Client
 import org.http4s.client.UnexpectedStatus
 import org.http4s.client.middleware.Metrics
-import org.http4s.dsl.io._
+import org.http4s.dsl.io.*
 import org.http4s.metrics.CustomMetricsOps
-import org.http4s.metrics.prometheus.util._
-import org.http4s.syntax.literals._
+import org.http4s.metrics.prometheus.util.*
+import org.http4s.syntax.literals.*
 import org.http4s.util.SizedSeq3
 
 import java.io.IOException
@@ -280,11 +280,11 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
 
   private def buildMeteredClient(
       classifier: Request[IO] => Option[String]
-  ): Resource[IO, (CollectorRegistry, Client[IO])] = {
+  ): Resource[IO, (PrometheusRegistry, Client[IO])] = {
     implicit val clock: Clock[IO] = FakeClock[IO]
 
     for {
-      registry <- Prometheus.collectorRegistry[IO]
+      registry <- Prometheus.prometheusRegistry[IO]
       metrics: CustomMetricsOps[IO, SizedSeq3[String]] <- Prometheus
         .default[IO](registry)
         .withPrefix("client")
@@ -294,6 +294,6 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
 
   def meteredClient(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
-  ): SyncIO[FunFixture[(CollectorRegistry, Client[IO])]] =
+  ): SyncIO[FunFixture[(PrometheusRegistry, Client[IO])]] =
     ResourceFunFixture(buildMeteredClient(classifier))
 }
