@@ -20,7 +20,12 @@ import cats.effect.Clock
 import cats.effect.IO
 import cats.effect.Sync
 import fs2.Stream
-import io.prometheus.client.CollectorRegistry
+import io.prometheus.metrics.model.registry.PrometheusRegistry
+import io.prometheus.metrics.model.snapshots.CounterSnapshot.CounterDataPointSnapshot
+import io.prometheus.metrics.model.snapshots.GaugeSnapshot.GaugeDataPointSnapshot
+import io.prometheus.metrics.model.snapshots.HistogramSnapshot
+import io.prometheus.metrics.model.snapshots.HistogramSnapshot.HistogramDataPointSnapshot
+import io.prometheus.metrics.model.snapshots.Labels
 import org.http4s.Method.GET
 import org.http4s.Request
 import org.http4s.Response
@@ -34,6 +39,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters.IterableHasAsScala
 
 object util {
   val providerLabels: SizedSeq3[String] = SizedSeq3("provider", "customLabel2", "customLabel3")
@@ -71,7 +77,7 @@ object util {
   }
 
   def count(
-      registry: CollectorRegistry,
+      registry: PrometheusRegistry,
       name: String,
       prefix: String,
       method: String = "get",
@@ -88,7 +94,7 @@ object util {
     )(EmptyCustomLabels())
 
   def cntWithCustLbl(
-      registry: CollectorRegistry,
+      registry: PrometheusRegistry,
       name: String,
       prefix: String,
       method: String = "get",
@@ -101,94 +107,173 @@ object util {
     val customValues = pCustomLabels.values.toSeq
     name match {
       case "active_requests" =>
-        registry.getSampleValue(
+        readGaugeSnapshot(
+          registry,
           s"${prefix}_active_request_count",
-          Array("classifier") ++ customLabels,
-          Array(classifier) ++ customValues,
+          Labels.of(
+            Array("classifier") ++ customLabels,
+            Array(classifier) ++ customValues,
+          ),
         )
       case "2xx_responses" =>
-        registry
-          .getSampleValue(
-            s"${prefix}_request_count_total",
-            Array("classifier", "method", "status") ++ customLabels.toSeq,
-            Array(classifier, method, "2xx") ++ customValues.toSeq,
-          )
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_request_count",
+          Labels.of(
+            Array("classifier", "method", "status") ++ customLabels,
+            Array(classifier, method, "2xx") ++ customValues,
+          ),
+        )
       case "2xx_headers_duration" =>
-        registry.getSampleValue(
-          s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase") ++ customLabels,
-          Array(classifier, method, "headers") ++ customValues,
+        readHistogramSeconds(
+          registry,
+          s"${prefix}_response_duration_seconds",
+          Labels.of(
+            Array("classifier", "method", "phase") ++ customLabels,
+            Array(classifier, method, "headers") ++ customValues,
+          ),
         )
       case "2xx_total_duration" =>
-        registry.getSampleValue(
-          s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase") ++ customLabels,
-          Array(classifier, method, "body") ++ customValues,
+        readHistogramSeconds(
+          registry,
+          s"${prefix}_response_duration_seconds",
+          Labels.of(
+            Array("classifier", "method", "phase") ++ customLabels,
+            Array(classifier, method, "body") ++ customValues,
+          ),
         )
+
       case "4xx_responses" =>
-        registry
-          .getSampleValue(
-            s"${prefix}_request_count_total",
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_request_count",
+          Labels.of(
             Array("classifier", "method", "status") ++ customLabels,
             Array(classifier, method, "4xx") ++ customValues,
-          )
+          ),
+        )
       case "4xx_headers_duration" =>
-        registry.getSampleValue(
-          s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase") ++ customLabels,
-          Array(classifier, method, "headers") ++ customValues,
+        readHistogramSeconds(
+          registry,
+          s"${prefix}_response_duration_seconds",
+          Labels.of(
+            Array("classifier", "method", "phase") ++ customLabels,
+            Array(classifier, method, "headers") ++ customValues,
+          ),
         )
       case "4xx_total_duration" =>
-        registry.getSampleValue(
-          s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase") ++ customLabels,
-          Array(classifier, method, "body") ++ customValues,
+        readHistogramSeconds(
+          registry,
+          s"${prefix}_response_duration_seconds",
+          Labels.of(
+            Array("classifier", "method", "phase") ++ customLabels,
+            Array(classifier, method, "body") ++ customValues,
+          ),
         )
       case "5xx_responses" =>
-        registry
-          .getSampleValue(
-            s"${prefix}_request_count_total",
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_request_count",
+          Labels.of(
             Array("classifier", "method", "status") ++ customLabels,
             Array(classifier, method, "5xx") ++ customValues,
-          )
+          ),
+        )
+
       case "5xx_headers_duration" =>
-        registry.getSampleValue(
-          s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase") ++ customLabels,
-          Array(classifier, method, "headers") ++ customValues,
+        readHistogramSeconds(
+          registry,
+          s"${prefix}_response_duration_seconds",
+          Labels.of(
+            Array("classifier", "method", "phase") ++ customLabels,
+            Array(classifier, method, "headers") ++ customValues,
+          ),
         )
       case "5xx_total_duration" =>
-        registry.getSampleValue(
-          s"${prefix}_response_duration_seconds_sum",
-          Array("classifier", "method", "phase") ++ customLabels,
-          Array(classifier, method, "body") ++ customValues,
+        readHistogramSeconds(
+          registry,
+          s"${prefix}_response_duration_seconds",
+          Labels.of(
+            Array("classifier", "method", "phase") ++ customLabels,
+            Array(classifier, method, "body") ++ customValues,
+          ),
         )
       case "errors" =>
-        registry.getSampleValue(
-          s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause") ++ customLabels,
-          Array(classifier, "error", cause) ++ customValues,
+
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_abnormal_terminations",
+          Labels.of(
+            Array("classifier", "termination_type", "cause") ++ customLabels,
+            Array(classifier, "error", cause) ++ customValues,
+          ),
         )
+
       case "timeouts" =>
-        registry.getSampleValue(
-          s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause") ++ customLabels,
-          Array(classifier, "timeout", cause) ++ customValues,
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_abnormal_terminations",
+          Labels.of(
+            Array("classifier", "termination_type", "cause") ++ customLabels,
+            Array(classifier, "timeout", cause) ++ customValues,
+          ),
         )
       case "abnormal_terminations" =>
-        registry.getSampleValue(
-          s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause") ++ customLabels,
-          Array(classifier, "abnormal", cause) ++ customValues,
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_abnormal_terminations",
+          Labels.of(
+            Array("classifier", "termination_type", "cause") ++ customLabels,
+            Array(classifier, "abnormal", cause) ++ customValues,
+          ),
         )
       case "cancels" =>
-        registry.getSampleValue(
-          s"${prefix}_abnormal_terminations_count",
-          Array("classifier", "termination_type", "cause") ++ customLabels,
-          Array(classifier, "cancel", cause) ++ customValues,
+        readCounterSnapshot(
+          registry,
+          s"${prefix}_abnormal_terminations",
+          Labels.of(
+            Array("classifier", "termination_type", "cause") ++ customLabels,
+            Array(classifier, "cancel", cause) ++ customValues,
+          ),
         )
     }
   }
+
+  private def readHistogramSeconds(registry: PrometheusRegistry, name: String, labels: Labels) =
+    registry
+      .scrape()
+      .asScala
+      .filter(_.getMetadata.getName == name)
+      .collect { case s: HistogramSnapshot => s }
+      .flatMap(_.getDataPoints.asScala.find(_.getLabels == labels))
+      .head
+      .getSum
+
+  private def readCounterSnapshot(registry: PrometheusRegistry, name: String, labels: Labels) =
+    registry
+      .scrape()
+      .asScala
+      .filter(_.getMetadata.getName == name)
+      .toList
+      .map(l => l.getDataPoints.asScala.find(_.getLabels == labels))
+      .collect {
+        case Some(c: CounterDataPointSnapshot) => c.getValue.toLong
+        case Some(h: HistogramDataPointSnapshot) => h.getCount
+      }
+      .head
+      .toDouble
+
+  private def readGaugeSnapshot(registry: PrometheusRegistry, name: String, labels: Labels) =
+    registry
+      .scrape()
+      .asScala
+      .filter(_.getMetadata.getName == name)
+      .toList
+      .map(l => l.getDataPoints.asScala.find(_.getLabels == labels))
+      .collect { case Some(c: GaugeDataPointSnapshot) =>
+        c.getValue
+      }
+      .head
 
   object FakeClock {
     def apply[F[_]: Sync]: Clock[F] =
