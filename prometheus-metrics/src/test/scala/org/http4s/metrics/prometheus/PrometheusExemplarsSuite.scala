@@ -53,7 +53,7 @@ class PrometheusExemplarsSuite extends CatsEffectSuite {
   private def buildMeteredClient(
       exemplar: Map[String, String]
   ): Resource[IO, (PrometheusRegistry, Client[IO])] = {
-    implicit val clock: Clock[IO] = FakeClock[IO]
+    given clock: Clock[IO] = FakeClock[IO]
 
     for {
       registry <- Prometheus.prometheusRegistry[IO]

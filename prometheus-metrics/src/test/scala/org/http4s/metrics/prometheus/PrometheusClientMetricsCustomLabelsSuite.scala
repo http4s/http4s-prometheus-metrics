@@ -281,7 +281,7 @@ class PrometheusClientMetricsCustomLabelsSuite extends CatsEffectSuite {
   private def buildMeteredClient(
       classifier: Request[IO] => Option[String]
   ): Resource[IO, (PrometheusRegistry, Client[IO])] = {
-    implicit val clock: Clock[IO] = FakeClock[IO]
+    given clock: Clock[IO] = FakeClock[IO]
 
     for {
       registry <- Prometheus.prometheusRegistry[IO]

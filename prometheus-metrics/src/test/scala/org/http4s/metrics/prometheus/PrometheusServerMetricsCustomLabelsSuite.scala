@@ -358,7 +358,7 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
   def buildMeteredRoutes(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
   ): Resource[IO, (PrometheusRegistry, HttpApp[IO])] = {
-    implicit val clock: Clock[IO] = FakeClock[IO]
+    given clock: Clock[IO] = FakeClock[IO]
     for {
       registry <- Prometheus.prometheusRegistry[IO]
       metrics <- Prometheus
