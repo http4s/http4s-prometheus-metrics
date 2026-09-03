@@ -12,7 +12,7 @@ lazy val root = project.in(file(".")).aggregate(prometheusMetrics).enablePlugins
 
 val http4sVersion = "0.23.36"
 val prometheusVersion = "0.16.0"
-val munitVersion = "1.3.0"
+val munitVersion = "1.3.1"
 val munitCatsEffectVersion = "2.2.0"
 
 lazy val prometheusMetrics = project
