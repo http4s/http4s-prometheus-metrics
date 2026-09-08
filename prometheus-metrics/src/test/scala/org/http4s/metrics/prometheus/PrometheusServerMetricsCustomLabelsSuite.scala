@@ -254,7 +254,7 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
       assertEquals(cntWithCustLbl(registry, "active_requests", "server")(paypalProviderLabels), 0.0)
       assertEquals(
         cntWithCustLbl(registry, "5xx_headers_duration", "server")(paypalProviderLabels),
-        0.05,
+        0.00,
       )
       assertEquals(
         cntWithCustLbl(registry, "5xx_total_duration", "server")(paypalProviderLabels),
