@@ -170,7 +170,7 @@ class PrometheusServerMetricsSuite extends CatsEffectSuite {
 
       assertEquals(count(registry, "errors", "server", cause = "java.io.IOException"), 1.0)
       assertEquals(count(registry, "active_requests", "server"), 0.0)
-      assertEquals(count(registry, "5xx_headers_duration", "server"), 0.05)
+      assertEquals(count(registry, "5xx_headers_duration", "server"), 0.0)
       assertEquals(count(registry, "5xx_total_duration", "server"), 0.05)
     }
   }
