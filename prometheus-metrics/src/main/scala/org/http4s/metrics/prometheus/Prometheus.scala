@@ -20,7 +20,10 @@ import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.all._
-import io.prometheus.client._
+import io.prometheus.metrics.core.metrics._
+import io.prometheus.metrics.model.registry.Collector
+import io.prometheus.metrics.model.registry.PrometheusRegistry
+import io.prometheus.metrics.model.snapshots.Labels
 import org.http4s.Method
 import org.http4s.Status
 import org.http4s.metrics.CustomLabels
@@ -33,7 +36,6 @@ import org.http4s.metrics.TerminationType.Canceled
 import org.http4s.metrics.TerminationType.Error
 import org.http4s.metrics.TerminationType.Timeout
 import org.http4s.metrics.prometheus.Prometheus.registerCollector
-import org.http4s.metrics.prometheus.Prometheus.toFlatArray
 import org.http4s.util.SizedSeq
 
 /** [[MetricsOps]] algebra capable of recording Prometheus metrics
@@ -90,13 +92,13 @@ import org.http4s.util.SizedSeq
   */
 final class Prometheus[F[_]: Sync] private (
     private val prefix: String,
-    private val registry: CollectorRegistry,
+    private val registry: PrometheusRegistry,
     private val sampleExemplar: F[Option[Map[String, String]]],
     private val responseDurationSecondsHistogramBuckets: NonEmptyList[Double],
 ) { self =>
   private def copy(
       prefix: String = self.prefix,
-      registry: CollectorRegistry = self.registry,
+      registry: PrometheusRegistry = self.registry,
       sampleExemplar: F[Option[Map[String, String]]] = self.sampleExemplar,
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] =
         self.responseDurationSecondsHistogramBuckets,
@@ -109,7 +111,7 @@ final class Prometheus[F[_]: Sync] private (
     )
 
   def withPrefix(prefix: String): Prometheus[F] = copy(prefix = prefix)
-  def withRegister(registry: CollectorRegistry): Prometheus[F] = copy(registry = registry)
+  def withRegister(registry: PrometheusRegistry): Prometheus[F] = copy(registry = registry)
 
   def withSampleExemplar(sampleExemplar: F[Option[Map[String, String]]]): Prometheus[F] =
     copy(sampleExemplar = sampleExemplar)
@@ -130,7 +132,10 @@ final class Prometheus[F[_]: Sync] private (
   private def createMetricsOps[SL <: SizedSeq[String]](pCustomLabels: CustomLabels[SL])(
       metrics: MetricsCollection[SL]
   ): CustomMetricsOps[F, SL] = {
-    val exemplarLabels: F[Option[Array[String]]] = sampleExemplar.map(_.map(toFlatArray))
+    val exemplarLabels: F[Labels] =
+      sampleExemplar.map(
+        _.fold(Labels.EMPTY)(examples => Labels.of(examples.keys.toArray, examples.values.toArray))
+      )
 
     new CustomMetricsOps[F, SL] {
       override def definingCustomLabels: CustomLabels[SL] = pCustomLabels
@@ -141,7 +146,7 @@ final class Prometheus[F[_]: Sync] private (
       ): F[Unit] =
         Sync[F].delay {
           metrics.activeRequests
-            .labels(label(classifier) +: customLabelValues.toSeq: _*)
+            .labelValues(label(classifier) +: customLabelValues.toSeq: _*)
             .inc()
         }
 
@@ -151,7 +156,7 @@ final class Prometheus[F[_]: Sync] private (
       ): F[Unit] =
         Sync[F].delay {
           metrics.activeRequests
-            .labels(label(classifier) +: customLabelValues.toSeq: _*)
+            .labelValues(label(classifier) +: customLabelValues.toSeq: _*)
             .dec()
         }
 
@@ -161,18 +166,18 @@ final class Prometheus[F[_]: Sync] private (
           classifier: Option[String],
           customLabelValues: SL,
       ): F[Unit] =
-        exemplarLabels.flatMap { exemplarOpt =>
+        exemplarLabels.flatMap { exemplar =>
           Sync[F].delay {
             metrics.responseDuration
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   reportMethod(method) +:
                   Phase.report(Phase.Headers) +:
                   customLabelValues.toSeq: _*
               )
               .observeWithExemplar(
-                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull: _*
+                Prometheus.elapsedSecondsFromNanos(0, elapsed),
+                exemplar,
               )
           }
         }
@@ -184,27 +189,27 @@ final class Prometheus[F[_]: Sync] private (
           classifier: Option[String],
           customLabelValues: SL,
       ): F[Unit] =
-        exemplarLabels.flatMap { exemplarOpt =>
+        exemplarLabels.flatMap { exemplar =>
           Sync[F].delay {
             metrics.responseDuration
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   reportMethod(method) +:
                   Phase.report(Phase.Body) +:
                   customLabelValues.toSeq: _*
               )
               .observeWithExemplar(
-                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull: _*
+                Prometheus.elapsedSecondsFromNanos(0, elapsed),
+                exemplar,
               )
             metrics.requests
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   reportMethod(method) +:
                   reportStatus(status) +:
                   customLabelValues.toSeq: _*
               )
-              .incWithExemplar(exemplarOpt.orNull: _*)
+              .incWithExemplar(exemplar)
           }
         }
 
@@ -226,18 +231,18 @@ final class Prometheus[F[_]: Sync] private (
           classifier: Option[String],
           customLabelValues: SL,
       ): F[Unit] =
-        exemplarLabels.flatMap { exemplarOpt =>
+        exemplarLabels.flatMap { exemplar =>
           Sync[F].delay {
             metrics.abnormalTerminations
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Canceled) +:
                   label(Option.empty) +:
                   customLabelValues.toSeq: _*
               )
               .observeWithExemplar(
-                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull: _*
+                Prometheus.elapsedSecondsFromNanos(0, elapsed),
+                exemplar,
               )
           }
         }
@@ -248,18 +253,18 @@ final class Prometheus[F[_]: Sync] private (
           customLabelValues: SL,
           cause: Throwable,
       ): F[Unit] =
-        exemplarLabels.flatMap { exemplarOpt =>
+        exemplarLabels.flatMap { exemplar =>
           Sync[F].delay {
             metrics.abnormalTerminations
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Abnormal) +:
                   label(Option(cause.getClass.getName)) +:
                   customLabelValues.toSeq: _*
               )
               .observeWithExemplar(
-                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull: _*
+                Prometheus.elapsedSecondsFromNanos(0, elapsed),
+                exemplar,
               )
           }
         }
@@ -270,18 +275,18 @@ final class Prometheus[F[_]: Sync] private (
           customLabelValues: SL,
           cause: Throwable,
       ): F[Unit] =
-        exemplarLabels.flatMap { exemplarOpt =>
+        exemplarLabels.flatMap { exemplar =>
           Sync[F].delay {
             metrics.abnormalTerminations
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Error) +:
                   label(Option(cause.getClass.getName)) +:
                   customLabelValues.toSeq: _*
               )
               .observeWithExemplar(
-                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull: _*
+                Prometheus.elapsedSecondsFromNanos(0, elapsed),
+                exemplar,
               )
           }
         }
@@ -291,18 +296,18 @@ final class Prometheus[F[_]: Sync] private (
           classifier: Option[String],
           customLabelValues: SL,
       ): F[Unit] =
-        exemplarLabels.flatMap { exemplarOpt =>
+        exemplarLabels.flatMap { exemplar =>
           Sync[F].delay {
             metrics.abnormalTerminations
-              .labels(
+              .labelValues(
                 label(classifier) +:
                   AbnormalTermination.report(AbnormalTermination.Timeout) +:
                   label(Option.empty) +:
                   customLabelValues.toSeq: _*
               )
               .observeWithExemplar(
-                SimpleTimer.elapsedSecondsFromNanos(0, elapsed),
-                exemplarOpt.orNull: _*
+                Prometheus.elapsedSecondsFromNanos(0, elapsed),
+                exemplar,
               )
           }
         }
@@ -342,42 +347,42 @@ final class Prometheus[F[_]: Sync] private (
 
     val responseDuration: Resource[F, Histogram] = registerCollector(
       Histogram
-        .build()
-        .buckets(responseDurationSecondsHistogramBuckets.toList: _*)
+        .builder()
+        .classicUpperBounds(responseDurationSecondsHistogramBuckets.toList: _*)
         .name(prefix + "_" + "response_duration_seconds")
         .help("Response Duration in seconds.")
         .labelNames("classifier" +: "method" +: "phase" +: customLabels.toSeq: _*)
-        .create(),
+        .build(),
       registry,
     )
 
     val activeRequests: Resource[F, Gauge] = registerCollector(
       Gauge
-        .build()
+        .builder()
         .name(prefix + "_" + "active_request_count")
         .help("Total Active Requests.")
         .labelNames("classifier" +: customLabels.toSeq: _*)
-        .create(),
+        .build(),
       registry,
     )
 
     val requests: Resource[F, Counter] = registerCollector(
       Counter
-        .build()
+        .builder()
         .name(prefix + "_" + "request_count")
         .help("Total Requests.")
         .labelNames("classifier" +: "method" +: "status" +: customLabels.toSeq: _*)
-        .create(),
+        .build(),
       registry,
     )
 
     val abnormalTerminations: Resource[F, Histogram] = registerCollector(
       Histogram
-        .build()
+        .builder()
         .name(prefix + "_" + "abnormal_terminations")
         .help("Total Abnormal Terminations.")
         .labelNames("classifier" +: "termination_type" +: "cause" +: customLabels.toSeq: _*)
-        .create(),
+        .build(),
       registry,
     )
 
@@ -386,8 +391,11 @@ final class Prometheus[F[_]: Sync] private (
 }
 
 object Prometheus {
-  def collectorRegistry[F[_]](implicit F: Sync[F]): Resource[F, CollectorRegistry] =
-    Resource.make(F.delay(new CollectorRegistry()))(cr => F.blocking(cr.clear()))
+  val NANOSECONDS_PER_SECOND = 1e9
+  def elapsedSecondsFromNanos(startNanos: Long, endNanos: Long): Double =
+    (endNanos - startNanos) / NANOSECONDS_PER_SECOND
+  def prometheusRegistry[F[_]](implicit F: Sync[F]): Resource[F, PrometheusRegistry] =
+    Resource.make(F.delay(new PrometheusRegistry()))(cr => F.blocking(cr.clear()))
 
   /** Creates a [[MetricsOps]] that supports Prometheus metrics
     *
@@ -395,7 +403,7 @@ object Prometheus {
     * @param prefix a prefix that will be added to all metrics
     */
   def metricsOps[F[_]: Sync](
-      registry: CollectorRegistry,
+      registry: PrometheusRegistry,
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
   ): Resource[F, MetricsOps[F]] =
@@ -417,7 +425,7 @@ object Prometheus {
     * @param prefix a prefix that will be added to all metrics
     */
   def metricsOpsWithExemplars[F[_]: Sync](
-      registry: CollectorRegistry,
+      registry: PrometheusRegistry,
       sampleExemplar: F[Option[Map[String, String]]],
       prefix: String = "org_http4s_server",
       responseDurationSecondsHistogramBuckets: NonEmptyList[Double] = DefaultHistogramBuckets,
@@ -431,9 +439,9 @@ object Prometheus {
 
   private[prometheus] def registerCollector[F[_], C <: Collector](
       collector: C,
-      registry: CollectorRegistry,
+      registry: PrometheusRegistry,
   )(implicit F: Sync[F]): Resource[F, C] =
-    Resource.make(F.blocking(collector.register[C](registry)))(c =>
+    Resource.make(F.blocking(registry.register(collector)).as(collector))(c =>
       F.blocking(registry.unregister(c))
     )
 
@@ -441,19 +449,7 @@ object Prometheus {
   val DefaultHistogramBuckets: NonEmptyList[Double] =
     NonEmptyList(.005, List(.01, .025, .05, .075, .1, .25, .5, .75, 1, 2.5, 5, 7.5, 10))
 
-  // Prometheus expects exemplars as alternating key-value strings: k1, v1, k2, v2, ...
-  private def toFlatArray(m: Map[String, String]): Array[String] = {
-    val arr = new Array[String](m.size * 2)
-    var i = 0
-    m.foreach { case (key, value) =>
-      arr(i) = key
-      arr(i + 1) = value
-      i += 2
-    }
-    arr
-  }
-
-  def default[F[_]: Sync](registry: CollectorRegistry) =
+  def default[F[_]: Sync](registry: PrometheusRegistry) =
     new Prometheus[F](
       prefix = "org_http4s_server",
       registry = registry,
