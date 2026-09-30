@@ -246,8 +246,9 @@ object util {
       .filter(_.getMetadata.getName == name)
       .collect { case s: HistogramSnapshot => s }
       .flatMap(_.getDataPoints.asScala.find(_.getLabels == labels))
-      .head
-      .getSum
+      // prometheus-1.x doesn't initialize everything to zero, so we need a default
+      .headOption
+      .fold(0.0)(_.getSum)
 
   private def readCounterSnapshot(registry: PrometheusRegistry, name: String, labels: Labels) =
     registry
