@@ -17,5 +17,6 @@ libraryDependencies ++= Seq(
 | 0.23.x                    | 0.23.x      | 0.11.x             | ✅         | ✅         | ❌      | EOL    |
 | 0.24.x                    | 0.23.x      | 0.16.x             | ✅         | ✅         | ✅      | EOL    |
 | 0.25.x                    | 0.23.x      | 0.16.x             | ✅         | ✅         | ✅      | Stable |
+| 0.26.x                    | 0.23.x      | 1.x                | ✅         | ✅         | ✅      | Dev    |
 
 [prometheus-metrics]: https://com-lihaoyi.github.io/prometheus-metrics/
