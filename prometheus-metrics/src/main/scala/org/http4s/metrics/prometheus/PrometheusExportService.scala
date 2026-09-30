@@ -45,7 +45,8 @@ final class PrometheusExportService[F[_]] private (
 
 object PrometheusExportService {
   private val openMetricsTextFormatWriter = new OpenMetricsTextFormatWriter(false, false)
-  private val prometheusTextFormatWriter = new PrometheusTextFormatWriter(false)
+  private val prometheusTextFormatWriter =
+    PrometheusTextFormatWriter.builder().setIncludeCreatedTimestamps(false).build()
 
   private val metricsPath: Path = path"/metrics"
 
