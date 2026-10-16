@@ -22,7 +22,7 @@ val apiService = HttpRoutes.of[IO] {
 val meteredRouter: Resource[IO, HttpRoutes[IO]] =
   for {
     metricsSvc <- PrometheusExportService.build[IO]
-    metrics <- Prometheus.metricsOps[IO](metricsSvc.collectorRegistry, "server")
+    metrics <- Prometheus.metricsOps[IO](metricsSvc.prometheusRegistry, "server")
     router = Router[IO](
       "/api" -> Metrics[IO](metrics)(apiService),
       "/" -> metricsSvc.routes
@@ -48,7 +48,7 @@ val classifier = (r: Request[IO]) => Some(r.method.toString.toLowerCase)
 
 val prefixedClient: Resource[IO, Client[IO]] =
   for {
-    registry <- Prometheus.collectorRegistry[IO]
+    registry <- Prometheus.prometheusRegistry[IO]
     metrics <- Prometheus.metricsOps[IO](registry, "prefix")
   } yield Metrics[IO](metrics, classifier)(httpClient)
 ```

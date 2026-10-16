@@ -1,10 +1,10 @@
-ThisBuild / tlBaseVersion := "0.25"
+ThisBuild / tlBaseVersion := "0.26"
 ThisBuild / developers := List(
   tlGitHubDev("rossabaker", "Ross A. Baker")
 )
 
 val Scala213 = "2.13.18"
-ThisBuild / crossScalaVersions := Seq("2.12.21", Scala213, "3.3.8")
+ThisBuild / crossScalaVersions := Seq(Scala213, "3.3.8")
 ThisBuild / scalaVersion := Scala213
 ThisBuild / startYear := Some(2018)
 
@@ -23,7 +23,7 @@ lazy val prometheusMetrics = project
     libraryDependencies ++= Seq(
       "org.http4s" %%% "http4s-core" % http4sVersion,
       "io.prometheus" % "prometheus-metrics-core" % prometheusVersion,
-      "io.prometheus" % "simpleclient_common" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-exposition-textformats" % prometheusVersion,
       "io.prometheus" % "prometheus-metrics-instrumentation-jvm" % prometheusVersion,
       "org.scalameta" %%% "munit-scalacheck" % munitVersion % Test,
       "org.typelevel" %%% "munit-cats-effect" % munitCatsEffectVersion % Test,

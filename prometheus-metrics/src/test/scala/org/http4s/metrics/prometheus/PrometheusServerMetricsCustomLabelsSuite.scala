@@ -17,7 +17,7 @@
 package org.http4s.metrics.prometheus
 
 import cats.effect._
-import io.prometheus.client.CollectorRegistry
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import munit.CatsEffectSuite
 import org.http4s.HttpApp
 import org.http4s.HttpRoutes
@@ -357,10 +357,10 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
 
   def buildMeteredRoutes(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
-  ): Resource[IO, (CollectorRegistry, HttpApp[IO])] = {
+  ): Resource[IO, (PrometheusRegistry, HttpApp[IO])] = {
     implicit val clock: Clock[IO] = FakeClock[IO]
     for {
-      registry <- Prometheus.collectorRegistry[IO]
+      registry <- Prometheus.prometheusRegistry[IO]
       metrics <- Prometheus
         .default[IO](registry)
         .withPrefix("server")
@@ -375,6 +375,6 @@ class PrometheusServerMetricsCustomLabelsSuite extends CatsEffectSuite {
 
   def meteredRoutes(
       classifier: Request[IO] => Option[String] = (_: Request[IO]) => None
-  ): SyncIO[FunFixture[(CollectorRegistry, HttpApp[IO])]] =
+  ): SyncIO[FunFixture[(PrometheusRegistry, HttpApp[IO])]] =
     ResourceFunFixture(buildMeteredRoutes(classifier))
 }
